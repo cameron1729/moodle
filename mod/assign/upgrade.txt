@@ -1,5 +1,10 @@
 This files describes API changes in the assign code.
 
+=== 3.11 ===
+* Renderer (renderer.php) has been moved from mod root to classes/output/ to be more PSR compliant.
+* Class assign_header has been moved from renderable.php to classes/ouput/assign_header.php
+* Class assign_submion_status has been moved from renderable.php to classes/ouput/assign_submion_status.php
+
 === 3.9 ===
 
 * The following functions, previously used (exclusively) by upgrade steps are not available anymore because of the upgrade cleanup performed for this version. See MDL-65809 for more info:
