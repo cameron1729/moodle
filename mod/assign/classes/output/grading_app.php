@@ -70,7 +70,7 @@ class grading_app implements templatable, renderable {
         user_preference_allow_ajax_update('assign_filter', PARAM_ALPHA);
         user_preference_allow_ajax_update('assign_workflowfilter', PARAM_ALPHA);
         user_preference_allow_ajax_update('assign_markerfilter', PARAM_ALPHANUMEXT);
-        $this->participants = $assignment->list_participants_with_filter_status_and_group($groupid);
+        $this->participants = $assignment->list_participants_with_filter_status_and_group($groupid, true);
         if (!$this->userid && count($this->participants)) {
             $this->userid = reset($this->participants)->id;
         }
@@ -99,6 +99,7 @@ class grading_app implements templatable, renderable {
         $export->hasmarkingworkflow = count($export->markingworkflowfilters) > 0;
         $export->markingallocationfilters = $this->assignment->get_marking_allocation_filters(true);
         $export->hasmarkingallocation = count($export->markingallocationfilters) > 0;
+        $export->useridlistid = $this->assignment->get_useridlist_key_id();
 
         $num = 1;
         foreach ($this->participants as $idx => $record) {
@@ -172,6 +173,7 @@ class grading_app implements templatable, renderable {
         $export->currentuserid = $USER->id;
         $helpicon = new \help_icon('sendstudentnotifications', 'assign');
         $export->helpicon = $helpicon->export_for_template($output);
+
         return $export;
     }
 

@@ -50,6 +50,7 @@ define(['core/ajax', 'jquery', 'core/templates'], function(ajax, $, templates) {
         transport: function(selector, query, success, failure) {
             var assignmentid = $(selector).attr('data-assignmentid');
             var groupid = $(selector).attr('data-groupid');
+            var useridlistid = $('[data-region="grading-navigation-panel"]').data('userid-list-id');
             var filters = $('[data-region="configure-filters"] input[type="checkbox"]');
             var filterstrings = [];
 
@@ -65,7 +66,8 @@ define(['core/ajax', 'jquery', 'core/templates'], function(ajax, $, templates) {
                     filter: query,
                     limit: 30,
                     includeenrolments: false,
-                    tablesort: true
+                    tablesort: true,
+                    useridlistid: useridlistid
                 }
             }])[0].then(function(results) {
                 var promises = [];
