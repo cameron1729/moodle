@@ -2593,7 +2593,9 @@ class mod_assign_external extends external_api {
                 'includeenrolments' => new external_value(PARAM_BOOL, 'Do return courses where the user is enrolled',
                                                           VALUE_DEFAULT, true),
                 'tablesort' => new external_value(PARAM_BOOL, 'Apply current user table sorting preferences.',
-                                                          VALUE_DEFAULT, false)
+                                                           VALUE_DEFAULT, false),
+                'useridlistid' => new external_value(PARAM_ALPHANUM, 'Key for user id list cache.',
+                                                  VALUE_DEFAULT, false)
             )
         );
     }
@@ -2609,12 +2611,13 @@ class mod_assign_external extends external_api {
      * @param bool $onlyids Only return user ids.
      * @param bool $includeenrolments Return courses where the user is enrolled.
      * @param bool $tablesort Apply current user table sorting params from the grading table.
+     * @param string $useridlistid String value used for lookup in the cached participants list.
      * @return array of warnings and status result
      * @since Moodle 3.1
      * @throws moodle_exception
      */
     public static function list_participants($assignid, $groupid, $filter, $skip,
-            $limit, $onlyids, $includeenrolments, $tablesort) {
+            $limit, $onlyids, $includeenrolments, $tablesort, $useridlistid = '') {
         global $DB, $CFG;
         require_once($CFG->dirroot . "/mod/assign/locallib.php");
         require_once($CFG->dirroot . "/user/lib.php");
@@ -2628,7 +2631,8 @@ class mod_assign_external extends external_api {
                                                 'limit' => $limit,
                                                 'onlyids' => $onlyids,
                                                 'includeenrolments' => $includeenrolments,
-                                                'tablesort' => $tablesort
+                                                'tablesort' => $tablesort,
+                                                'useridlistid' => $useridlistid
                                             ));
         $warnings = array();
 
@@ -2640,7 +2644,11 @@ class mod_assign_external extends external_api {
 
         $participants = array();
         if (groups_group_visible($params['groupid'], $course, $cm)) {
-            $participants = $assign->list_participants_with_filter_status_and_group($params['groupid'], $params['tablesort']);
+            $participants = $assign->list_participants_with_filter_status_and_group(
+                $params['groupid'],
+                $params['tablesort'],
+                $params['useridlistid']
+            );
         }
 
         $userfields = user_get_default_fields();

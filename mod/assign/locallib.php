@@ -2055,11 +2055,12 @@ class assign {
      *
      * @param int $currentgroup
      * @param boolean $tablesort Apply current user table sorting preferences.
+     * @param string $useridlistid String value used for lookup in the cached participants list.
      * @return array List of user records with extra fields 'submitted', 'notsubmitted', 'requiregrading', 'grantedextension',
      *               'groupid', 'groupname'
      */
-    public function list_participants_with_filter_status_and_group($currentgroup, $tablesort = false) {
-        $participants = $this->list_participants($currentgroup, false, $tablesort);
+    public function list_participants_with_filter_status_and_group($currentgroup, $tablesort = false, $useridlistid = false) {
+        $participants = $this->list_participants($currentgroup, false, $tablesort, $useridlistid);
 
         if (empty($participants)) {
             return $participants;
@@ -2139,9 +2140,10 @@ class assign {
      * @param int $currentgroup
      * @param bool $idsonly
      * @param bool $tablesort
+     * @param string $useridlistid String value used for lookup in the cached participants list.
      * @return array List of user records
      */
-    public function list_participants($currentgroup, $idsonly, $tablesort = false) {
+    public function list_participants($currentgroup, $idsonly, $tablesort = false, $useridlistid = false) {
         global $DB, $USER;
 
         // Get the last known sort order for the grading table.
@@ -2219,7 +2221,7 @@ class assign {
 
         if ($tablesort) {
             // Resort the user list according to the grading table sort and filter settings.
-            $sortedfiltereduserids = $this->get_grading_userid_list(true, '');
+            $sortedfiltereduserids = $this->get_grading_userid_list(true, $useridlistid ?: '');
             $sortedfilteredusers = [];
             foreach ($sortedfiltereduserids as $nextid) {
                 $nextid = intval($nextid);
@@ -2545,6 +2547,7 @@ class assign {
             if (empty($SESSION->mod_assign_useridlist[$useridlistkey])) {
                 $SESSION->mod_assign_useridlist[$useridlistkey] = $this->get_grading_userid_list(false, '');
             }
+
             return $SESSION->mod_assign_useridlist[$useridlistkey];
         }
         $filter = get_user_preferences('assign_filter', '');
