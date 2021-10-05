@@ -19,18 +19,84 @@
 
     Actions panel at the bottom of the assignment grading UI.
 
+    This template includes ajax functionality, so it cannot be shown in the template library.
+
+    For more details re: the example context, see grading_app.php
+
     Classes required for JS:
     * Uses some bootstrap classes, but for visual appeal only.
 
     Data attributes required for JS:
-    * data-region, data-first-userid, data-courseid, data-contextid, data-assignmentid
+    * data-region, data-first-userid, data-courseid, data-contextid, data-assignmentid, data-userid-list-id
 
-    Context variables required for this template:
-    * see mod/assign/classes/output/grading_app.php
-
-    This template includes ajax functionality, so it cannot be shown in the template library.
+    Example context (json):
+    {
+        "userid": 12,
+        "assignmentid": "1",
+        "cmid": "2",
+        "contextid": 35,
+        "groupid": false,
+        "name": "Assignment: Assignment Name",
+        "courseid": "2",
+        "participants": [
+            {
+                "id": "12",
+                "fullname": "Hugo Peña",
+                "requiregrading": false,
+                "grantedextension": false,
+                "submitted": false,
+                "current": true
+            }
+        ],
+        "markingworkflowfilters": [],
+        "hasmarkingworkflow": false,
+        "markingallocationfilters": [],
+        "hasmarkingallocation": false,
+        "useridlistid": "615d3b0e4e3f2948284114",
+        "index": 1,
+        "actiongrading": "grading",
+        "viewgrading": "View all submissions",
+        "showreview": true,
+        "count": 10,
+        "coursename": "Course: Blah",
+        "caneditsettings": true,
+        "duedate": 1633881600,
+        "duedatestr": "Monday, 11 October 2021, 12:00 AM",
+        "timeremainingstr": "Time remaining: 4 days 10 hours",
+        "defaultsendnotifications": "1",
+        "rarrow": "►",
+        "larrow": "◄",
+        "showuseridentity": "email",
+        "currentuserid": "2",
+        "helpicon": {
+            "heading": "Notify students",
+            "text": "Help string",
+            "alt": "Help with Notify students",
+            "icon": {
+                "attributes": [
+                    {
+                        "name": "alt",
+                        "value": "Help with Notify students"
+                    },
+                    {
+                        "name": "title",
+                        "value": "Help with Notify students"
+                    },
+                    {
+                        "name": "src",
+                        "value": "http://localhost/m/stable_master/theme/image.php?theme=boost&component=core&image=help"
+                    }
+                ],
+                "extraclasses": "iconhelp"
+            },
+            "linktext": null,
+            "title": "Help with Notify students",
+            "url": "http://localhost/m/stable_master/help.php?component=assign&identifier=sendstudentnotifications&lang=en",
+            "ltr": true
+        }
+    }
 }}
-<div data-region="grading-navigation-panel" data-first-userid="{{userid}}" data-courseid="{{courseid}}" data-showuseridentity="{{showuseridentity}}">
+<div data-region="grading-navigation-panel" data-first-userid="{{userid}}" data-courseid="{{courseid}}" data-showuseridentity="{{showuseridentity}}" data-userid-list-id="{{useridlistid}}">
 {{> mod_assign/grading_navigation }}
 </div>
 {{#showreview}}

@@ -107,6 +107,7 @@ define(['jquery', 'core/notification', 'core/str', 'core/form-autocomplete',
         var select = this._region.find('[data-action=change-user]');
         var assignmentid = select.attr('data-assignmentid');
         var groupid = select.attr('data-groupid');
+        var useridlistid = $('[data-region="grading-navigation-panel"]').data('userid-list-id');
 
         var filterPanel = this._region.find('[data-region="configure-filters"]');
         var filter = filterPanel.find('select[name="filter"]').val();
@@ -126,7 +127,14 @@ define(['jquery', 'core/notification', 'core/str', 'core/form-autocomplete',
 
         ajax.call([{
             methodname: 'mod_assign_list_participants',
-            args: {assignid: assignmentid, groupid: groupid, filter: '', onlyids: true, tablesort: true},
+            args: {
+                assignid: assignmentid,
+                groupid: groupid,
+                filter: '',
+                onlyids: true,
+                tablesort: true,
+                useridlistid: useridlistid
+            },
             done: this._usersLoaded.bind(this),
             fail: notification.exception
         }]);
@@ -253,6 +261,13 @@ define(['jquery', 'core/notification', 'core/str', 'core/form-autocomplete',
         var select = this._region.find('[data-action=change-user]');
         var currentUserID = select.data('currentuserid');
         this._updateFilterPreferences(currentUserID, this._filters, preferenceNames).done(function() {
+            // Generate a new key for the SESSION cache used by mod_assign_list_participants.
+            // See MDL-69920 for details.
+            var sec = Date.now() * 1000 + Math.random() * 1000;
+            var id = sec.toString(16).replace(/\./g, "").padEnd(14, "0");
+            var uniqid = `${id}${`${Math.trunc(Math.random() * 100000000)}`}`;
+            $('[data-region="grading-navigation-panel"]').data('userid-list-id', uniqid);
+
             // Reload the list of users to apply the new filters.
             if (!this._loadAllUsers()) {
                 var userid = parseInt(select.attr('data-selected'));
