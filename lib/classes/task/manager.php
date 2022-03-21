@@ -1021,8 +1021,12 @@ class manager {
         $cronlockfactory = \core\lock\lock_config::get_lock_factory('cron');
         $runningtasks = self::get_running_tasks();
 
+        mtrace("Got potentially running tasks with ids: " . implode(", ", array_column($runningtasks, 'id')));
+
         foreach ($runningtasks as $taskrecord) {
-            if ($taskrecord->timestarted > time() - HOURSECS) {
+            mtrace("Check task with id: " . $taskrecord->id);
+
+            if ($taskrecord->timestarted > time() - 5) {
                 continue;
             }
 
@@ -1042,16 +1046,19 @@ class manager {
             // In the case of 1. we need to make the task as failed, in the case of 2. and 3. we do nothing.
             if (!empty($lock)) {
                 if ($taskrecord->classname == "\\" . \core\task\task_lock_cleanup_task::class) {
+                    mtrace("This is us, continue");
                     $lock->release();
                     continue;
                 }
 
                 if ($taskrecord->type == 'scheduled') {
                     // We need to get the record again to verify whether or not we are dealing with case 3.
+                    mtrace("Got lock for scheduled task " . $taskrecord->id);
                     $taskrecord = $DB->get_record('task_scheduled', ['id' => $taskrecord->id]);
 
                     // Empty timestarted indicates that this task finished (case 3) and was properly cleaned up.
                     if (empty($taskrecord->timestarted)) {
+                        mtrace("Scheduled Task " . $taskrecord->id . " finished, no need to do anyting");
                         $lock->release();
                         continue;
                     }
@@ -1061,12 +1068,15 @@ class manager {
                     self::scheduled_task_failed($task);
                 } else if ($taskrecord->type == 'adhoc') {
                     // As above, we must get the record again to verify if we are dealing with case 3.
+                    mtrace("Got lock for adhoc task " . $taskrecord->id);
+                    $oldid = $taskrecord->id;
                     $taskrecord = $DB->get_record('task_adhoc', ['id' => $taskrecord->id]);
 
                     // Ad hoc tasks are removed from the DB if they finish successfully.
                     // If we can't re-get this task, that means it finished and was properly
                     // cleaned up.
                     if (!$taskrecord) {
+                        mtrace("Adhoc Task " . $oldid . " finished, no need to do anyting");
                         $lock->release();
                         continue;
                     }
@@ -1075,7 +1085,12 @@ class manager {
                     $task->set_lock($lock);
                     self::adhoc_task_failed($task);
                 }
+            } else {
+                mtrace("Did not get lock for task " . $taskrecord->id . " it is still in progress");
             }
+
+            mtrace("Sleep 110 seconds");
+            sleep(110);
         }
     }
 
