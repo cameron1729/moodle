@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="lib/db" VERSION="20220531" COMMENT="XMLDB file for core Moodle tables"
+<XMLDB PATH="lib/db" VERSION="20220805" COMMENT="XMLDB file for core Moodle tables"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="../../lib/xmldb/xmldb.xsd"
 >
@@ -260,6 +260,7 @@
       </KEYS>
       <INDEXES>
         <INDEX NAME="enrol" UNIQUE="false" FIELDS="enrol"/>
+        <INDEX NAME="uniquecourseinstance" UNIQUE="true" FIELDS="enrol, courseid"/>
       </INDEXES>
     </TABLE>
     <TABLE NAME="user_enrolments" COMMENT="Users participating in courses (aka enrolled users) - everybody who is participating/visible in course, that means both teachers and students">

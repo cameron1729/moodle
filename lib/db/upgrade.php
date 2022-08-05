@@ -2879,5 +2879,17 @@ privatefiles,moodle|/user/files.php';
         upgrade_main_savepoint(true, 2022061500.00);
     }
 
+    if ($oldversion < 2022080500.01) {
+        $table = new xmldb_table('enrol');
+        $index = new xmldb_index('uniquecourseinstance', XMLDB_INDEX_UNIQUE, ['enrol', 'courseid']);
+
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2022080500.01);
+    }
+
     return true;
 }

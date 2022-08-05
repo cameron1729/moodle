@@ -761,6 +761,8 @@ class externallib_test extends externallib_advanced_testcase {
         $this->assertNotEmpty($selfplugin);
         $manualplugin = enrol_get_plugin('manual');
         $this->assertNotEmpty($manualplugin);
+        $databaseplugin = enrol_get_plugin('database');
+        $this->assertNotEmpty($databaseplugin);
 
         $studentrole = $DB->get_record('role', array('shortname'=>'student'));
         $this->assertNotEmpty($studentrole);
@@ -770,21 +772,20 @@ class externallib_test extends externallib_advanced_testcase {
         $coursedata->visible = 0;
         $course2 = self::getDataGenerator()->create_course($coursedata);
 
+        $instances = enrol_get_instances($course1->id, false);
+        $selfinstance = array_values(array_filter($instances, function (\stdClass $instance) use ($selfplugin): bool {
+            return $instance->enrol == $selfplugin->get_name();
+        }))[0];
+
         // Add enrolment methods for course.
-        $instanceid1 = $selfplugin->add_instance($course1, array('status' => ENROL_INSTANCE_ENABLED,
-                                                                'name' => 'Test instance 1',
-                                                                'customint6' => 1,
-                                                                'roleid' => $studentrole->id));
-        $instanceid2 = $selfplugin->add_instance($course1, array('status' => ENROL_INSTANCE_DISABLED,
+        $selfplugin->update_status($selfinstance, ENROL_INSTANCE_ENABLED);
+
+        $instanceid2 = $databaseplugin->add_instance($course1, array('status' => ENROL_INSTANCE_DISABLED,
                                                                 'name' => 'Test instance 2',
                                                                 'roleid' => $studentrole->id));
 
-        $instanceid3 = $manualplugin->add_instance($course1, array('status' => ENROL_INSTANCE_ENABLED,
-                                                                'name' => 'Test instance 3'));
-
         $enrolmentmethods = $DB->get_records('enrol', array('courseid' => $course1->id, 'status' => ENROL_INSTANCE_ENABLED));
         $this->assertCount(2, $enrolmentmethods);
-
         $this->setAdminUser();
 
         // Check if information is returned.
@@ -801,11 +802,15 @@ class externallib_test extends externallib_advanced_testcase {
         $this->assertTrue($enrolmentmethod['status']);
         $this->assertFalse(isset($enrolmentmethod['wsfunction']));
 
-        $instanceid4 = $selfplugin->add_instance($course2, array('status' => ENROL_INSTANCE_ENABLED,
-                                                                'name' => 'Test instance 4',
-                                                                'roleid' => $studentrole->id,
-                                                                'customint6' => 1,
-                                                                'password' => 'test'));
+        $instances = enrol_get_instances($course2->id, false);
+        $selfinstance = array_values(array_filter($instances, function (\stdClass $instance) use ($selfplugin): bool {
+            return $instance->enrol == $selfplugin->get_name();
+        }))[0];
+
+        $selfinstance->status = ENROL_INSTANCE_ENABLED;
+        $selfinstance->password = 'test';
+
+        $instanceid4 = $selfplugin->update_instance($selfinstance, $selfinstance);
         $enrolmentmethods = core_enrol_external::get_course_enrolment_methods($course2->id);
         $enrolmentmethods = \external_api::clean_returnvalue(core_enrol_external::get_course_enrolment_methods_returns(),
                                                             $enrolmentmethods);

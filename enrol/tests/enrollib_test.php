@@ -590,12 +590,12 @@ class enrollib_test extends advanced_testcase {
         $studentrole = $DB->get_record('role', array('shortname' => 'student'));
         $this->assertNotEmpty($studentrole);
 
-        $instance1id = $selfplugin->add_instance($course1, array('status' => ENROL_INSTANCE_ENABLED,
-                                                                 'name' => 'Test instance 1',
-                                                                 'customint6' => 1,
-                                                                 'roleid' => $studentrole->id));
+        $instances = enrol_get_instances($course1->id, false);
+        $selfinstance = array_values(array_filter($instances, function (stdClass $instance) use ($selfplugin): bool {
+            return $instance->enrol == $selfplugin->get_name();
+        }))[0];
 
-        $instance1 = $DB->get_record('enrol', array('id' => $instance1id), '*', MUST_EXIST);
+        $selfplugin->update_status($selfinstance, ENROL_INSTANCE_ENABLED);
 
         self::setUser($user2);
         // Self enrol me (user2).
@@ -716,17 +716,18 @@ class enrollib_test extends advanced_testcase {
 
         $this->resetAfterTest(true);
 
-        $selfplugin = enrol_get_plugin('self');
+        $databaseplugin = enrol_get_plugin('database');
         $studentrole = $DB->get_record('role', array('shortname' => 'student'));
 
         $course = $this->getDataGenerator()->create_course();
 
         // Creating enrol instance.
         $sink = $this->redirectEvents();
-        $instanceid = $selfplugin->add_instance($course, array('status' => ENROL_INSTANCE_ENABLED,
+        $instanceid = $databaseplugin->add_instance($course, array('status' => ENROL_INSTANCE_ENABLED,
                                                                 'name' => 'Test instance 1',
                                                                 'customint6' => 1,
-                                                                'roleid' => $studentrole->id));
+                                                               'roleid' => $studentrole->id));
+
         $events = $sink->get_events();
         $sink->close();
 
@@ -734,13 +735,13 @@ class enrollib_test extends advanced_testcase {
         $event = array_pop($events);
         $this->assertInstanceOf('\core\event\enrol_instance_created', $event);
         $this->assertEquals(context_course::instance($course->id), $event->get_context());
-        $this->assertEquals('self', $event->other['enrol']);
+        $this->assertEquals('database', $event->other['enrol']);
         $this->assertEventContextNotUsed($event);
 
         // Updating enrol instance.
         $instance = $DB->get_record('enrol', array('id' => $instanceid));
         $sink = $this->redirectEvents();
-        $selfplugin->update_status($instance, ENROL_INSTANCE_DISABLED);
+        $databaseplugin->update_status($instance, ENROL_INSTANCE_DISABLED);
 
         $events = $sink->get_events();
         $sink->close();
@@ -749,13 +750,13 @@ class enrollib_test extends advanced_testcase {
         $event = array_pop($events);
         $this->assertInstanceOf('\core\event\enrol_instance_updated', $event);
         $this->assertEquals(context_course::instance($course->id), $event->get_context());
-        $this->assertEquals('self', $event->other['enrol']);
+        $this->assertEquals('database', $event->other['enrol']);
         $this->assertEventContextNotUsed($event);
 
         // Deleting enrol instance.
         $instance = $DB->get_record('enrol', array('id' => $instanceid));
         $sink = $this->redirectEvents();
-        $selfplugin->delete_instance($instance);
+        $databaseplugin->delete_instance($instance);
 
         $events = $sink->get_events();
         $sink->close();
@@ -764,7 +765,7 @@ class enrollib_test extends advanced_testcase {
         $event = array_pop($events);
         $this->assertInstanceOf('\core\event\enrol_instance_deleted', $event);
         $this->assertEquals(context_course::instance($course->id), $event->get_context());
-        $this->assertEquals('self', $event->other['enrol']);
+        $this->assertEquals('database', $event->other['enrol']);
         $this->assertEventContextNotUsed($event);
     }
 
@@ -1153,9 +1154,12 @@ class enrollib_test extends advanced_testcase {
         // Create a self enrolment instance, enrol first user only.
         $self = enrol_get_plugin('self');
 
-        $selfid = $self->add_instance($course,
-            ['status' => ENROL_INSTANCE_ENABLED, 'name' => 'Self', 'customint6' => 1, 'roleid' => $studentrole->id]);
-        $selfinstance = $DB->get_record('enrol', ['id' => $selfid], '*', MUST_EXIST);
+        $instances = enrol_get_instances($course->id, false);
+        $selfinstance = array_values(array_filter($instances, function (stdClass $instance) use ($self): bool {
+            return $instance->enrol == $self->get_name();
+        }))[0];
+
+        $self->update_status($selfinstance, ENROL_INSTANCE_ENABLED);
 
         $self->enrol_user($selfinstance, $user1->id, $studentrole->id);
 
