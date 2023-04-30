@@ -23,6 +23,7 @@ namespace quizaccess_seb;
  * @author    Andrew Madden <andrewmadden@catalyst-au.net>
  * @copyright 2020 Catalyst IT
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @coversDefaultClass \quizaccess_seb\property_list
  */
 class property_list_test extends \advanced_testcase {
 
@@ -244,6 +245,24 @@ class property_list_test extends \advanced_testcase {
     }
 
     /**
+     * Test that parsing XML files with exotic text encodings produce UTF-8 encoded "SEB-JSON".
+     *
+     * @dataProvider export_to_json_from_file_with_exotic_text_encodings_data_provider
+     * @param string $file XML fixture file to parse in to a CFPropertyList.
+     * @param string $expectedjson Expected JSON output.
+     *
+     * @covers ::to_json
+     */
+    public function test_export_to_json_from_file_with_exotic_text_encodings(string $file, string $expectedjson) {
+        $xml = file_get_contents(__DIR__ . '/fixtures/' . $file);
+        $plist = new property_list($xml);
+        $json = $plist->to_json();
+
+        $this->assertEquals($expectedjson, $json);
+        $this->assertTrue(mb_detect_encoding($json, 'UTF-8', true) === 'UTF-8');
+    }
+
+    /**
      * Test the set_or_update_value function.
      */
     public function test_set_or_update_value() {
@@ -369,13 +388,12 @@ class property_list_test extends \advanced_testcase {
      * Examples extracted from requirements listed in SEB Config Key documents.
      * https://safeexambrowser.org/developer/seb-config-key.html
      *
-     * 1. Date should be in ISO 8601 format.
-     * 2. Data should be base 64 encoded.
-     * 3. String should be UTF-8 encoded.
-     * 4, 5, 6, 7. No requirements for bools, arrays or dicts.
-     * 8. Empty dicts should not be included.
-     * 9. JSON key ordering should be case insensitive, and use string ordering.
-     * 10. URL forward slashes should not be escaped.
+     * Note that we cannot test all control characters here as XML 1.0 does not support
+     * backspace or form feed control characters. They are valid in XML 1.1, but libxml2
+     * (which is ultimately what does the parsing) does not support XML 1.1.
+     *
+     * More comprehensive tests for control characters and escape sequences can be found
+     * in helper_test::seb_json_data_provider.
      *
      * @return array
      */
@@ -387,15 +405,19 @@ class property_list_test extends \advanced_testcase {
             'date' => ["<key>date</key><date>1940-10-09T22:13:56Z</date>", "{\"date\":\"1940-10-09T22:13:56+00:00\"}"],
             'data' => ["<key>data</key><data>$base64data</data>", "{\"data\":\"$base64data\"}"],
             'string' => ["<key>string</key><string>hello wörld</string>", "{\"string\":\"hello wörld\"}"],
-            'string with 1 backslash' => ["<key>string</key><string>ws:\localhost</string>", "{\"string\":\"ws:\localhost\"}"],
-            'string with 2 backslashes' => ["<key>string</key><string>ws:\\localhost</string>",
-                    '{"string":"ws:\\localhost"}'],
-            'string with 3 backslashes' => ["<key>string</key><string>ws:\\\localhost</string>",
-                    '{"string":"ws:\\\localhost"}'],
-            'string with 4 backslashes' => ["<key>string</key><string>ws:\\\\localhost</string>",
+            'string with 1 backslash' => ["<key>string</key><string>ws:\\localhost</string>", "{\"string\":\"ws:\\localhost\"}"],
+            'string with 2 backslashes' => ["<key>string</key><string>ws:\\\\localhost</string>",
                     '{"string":"ws:\\\\localhost"}'],
-            'string with 5 backslashes' => ["<key>string</key><string>ws:\\\\\localhost</string>",
-                    '{"string":"ws:\\\\\localhost"}'],
+            'string with 3 backslashes' => ["<key>string</key><string>ws:\\\\\\localhost</string>",
+                    '{"string":"ws:\\\\\\localhost"}'],
+            'string with 4 backslashes' => ["<key>string</key><string>ws:\\\\\\\\localhost</string>",
+                    '{"string":"ws:\\\\\\\\localhost"}'],
+            'string with 5 backslashes' => ["<key>string</key><string>ws:\\\\\\\\\\localhost</string>",
+                    '{"string":"ws:\\\\\\\\\\localhost"}'],
+            'string with solidus' => ["<key>string</key><string>http://chef.dvd</string>",
+                    '{"string":"http://chef.dvd"}'],
+            'string with control characters' => ["<key>string</key><string>&#x09; &#x0A; &#x0D;</string>",
+                    '{"string":"' . "  " .'"}'],
             'bool' => ["<key>bool</key><true/>", "{\"bool\":true}"],
             'array' => ["<key>array</key><array><key>arraybool</key><false/><key>arraybool2</key><true/></array>"
                     , "{\"array\":[false,true]}"],
@@ -418,6 +440,19 @@ class property_list_test extends \advanced_testcase {
 <key>3</key><true/><key>4</key><true/><key>5</key><true/><key>6</key><true/>
 <key>7</key><true/><key>8</key><true/><key>9</key><true/><key>10</key><true/></array>",
                     "{\"array\":[false,true,true,true,true,true,true,true,true,true]}"],
+        ];
+    }
+
+    /**
+     * Data provider for test_export_to_json_from_file_with_exotic_text_encodings.
+     *
+     * @return array
+     */
+    public function export_to_json_from_file_with_exotic_text_encodings_data_provider(): array {
+        return [
+            'File with GB18030 encoded text' => ['GB18030.seb', "{\"string\":\"你好啊！这是侃睦！\"}"],
+            'File with KOI8-R encoded text' => ['KOI8-R.seb', "{\"string\":\"Привет! Это Кэм!\"}"],
+            'File with Shift_JIS encoded text' => ['Shift_JIS.seb', "{\"string\":\"こんにちは！カムです！\"}"]
         ];
     }
 }

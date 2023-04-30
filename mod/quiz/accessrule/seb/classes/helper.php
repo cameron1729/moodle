@@ -142,5 +142,35 @@ class helper {
         echo($contents);
     }
 
+    /**
+     * Creates a "SEB-JSON" string.
+     *
+     * "SEB-JSON" strings are specified uner the "Summary Config Key Generation" section of the developer
+     * documentation: https://safeexambrowser.org/developer/seb-config-key.html
+     *
+     * This function handles the transforming of native PHP data type in to "SEB-JSON". In particular it
+     * handles the requirement to not add whitespace or character escaping.
+     *
+     * Note that even though the documention says not to add any white space or line formatting, we have
+     * nonetheless observed "SEB-JSON" containing U+0020 (" "). Unfortunately the language used:
+     *
+     *     "Don't add any whitespace or line formatting to the SEB-JSON string."
+     *
+     * Is not precise enough. Does it mean don't add additional whitespace or line formatting (i.e., preserve
+     * existing white space and line formatting), or does it mean don't add white space or line formatting
+     * at all (i.e., strip out whitespace and line formatting).
+     *
+     * A parameter, $preserve is provided to prevent specific characters from being stripped out.
+     *
+     * @param mixed $data Data to encode as a "SEB-JSON" string.
+     * @param array $preserve Array of strings to preserve.
+     * @return string The "SEB-JSON" string.
+     */
+    public static function seb_json_encode($data, array $preserve = []): string {
+        return preg_replace_callback(
+            '/[\x00-\x1F\x7F\s]/',
+            fn(array $match): string => in_array($match[0], $preserve) ? $match[0] : '',
+            stripcslashes(json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE))
+        );
+    }
 }
-

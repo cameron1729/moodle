@@ -27,6 +27,7 @@ require_once(__DIR__ . '/test_helper_trait.php');
  * @author     Dmitrii Metelkin <dmitriim@catalyst-au.net>
  * @copyright  2020 Catalyst IT
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @coversDefaultClass \quizaccess_seb\helper
  */
 class helper_test extends \advanced_testcase {
     use \quizaccess_seb_test_helper_trait;
@@ -185,4 +186,101 @@ class helper_test extends \advanced_testcase {
             . "<key>allowPreferencesWindow</key><false/></dict></plist>\n", $config);
     }
 
+    /**
+     * Test native PHP data is encoded as a "SEB-JSON" string as per the specification.
+     *
+     * @dataProvider seb_json_encode_data_provider
+     * @param mixed $data Data to encode.
+     * @param string $expected Expected result.
+     *
+     * @covers ::seb_json_encode
+     */
+    public function test_seb_json_encode($data, $expected) {
+        $this->assertEquals($expected, helper::seb_json_encode($data));
+    }
+
+    /**
+     * For extra fun (it is a fact that everyone loves character encoding bugs), create
+     * an absolute mess of control characters interspersed throughout random strings and
+     * verify that none of them make it in to the "SEB-JSON" string.
+     *
+     * @dataProvider seb_json_encode_randomised_data_provider
+     * @param mixed $data Data to encode.
+     *
+     * @covers ::seb_json_encode
+     */
+    public function test_seb_json_encode_randomised($data) {
+        $intersperse = function(string $string, array $elements): string {
+            $chararray = mb_str_split($string);
+            $len = count($chararray);
+            $chunks = array_chunk($chararray, ceil($len / random_int(1, $len)));
+
+            $interspersed = array_map(
+                fn(array $chunk): array => array_merge(
+                    $chunk,
+                    [$elements[array_rand($elements)]]
+                ), $chunks);
+
+            return  array_reduce($interspersed, fn(string $c, array $v): string => $c . join($v), '');
+        };
+
+        $stuffthatshouldnotbeescaped = ["\\", "/", "\""];
+        $stuffthatshouldbestripped = [chr(8), "\f", "\n", "\r", "\t", " "];
+        $stufftointersperse = array_merge($stuffthatshouldnotbeescaped, $stuffthatshouldbestripped);
+        $interspersed = $intersperse($data, $stufftointersperse);
+
+        $this->assertEmpty(
+            array_intersect(mb_str_split(helper::seb_json_encode($interspersed)),
+            $stuffthatshouldbestripped)
+        );
+
+        $codepoints = array_flip(array_map('ord', $stuffthatshouldnotbeescaped));
+        $inputcounts = array_intersect_key(count_chars($interspersed . "\"\"", 1), $codepoints);
+        $outputcounts = array_intersect_key(count_chars(helper::seb_json_encode($interspersed), 1), $codepoints);
+        $this->assertEquals($inputcounts, $outputcounts);
+    }
+
+    /**
+     * Data provider for test_seb_json_encode.
+     *
+     * @return array List of test cases and expected results.
+     */
+    public function seb_json_encode_data_provider(): array {
+        return [
+            'String with plain whitespace' => ['A basic string with whitespace', "\"Abasicstringwithwhitespace\""],
+            'String with quotation marks' => [
+                '"I don\'t know half of you half as well as I should like, ' .
+                'and I like less than half of you half as well as you deserve."',
+                '""Idon\'tknowhalfofyouhalfaswellasIshouldlike,andIlikelessthanhalfofyouhalfaswellasyoudeserve.""',
+            ],
+            'String with reverse solidus' => ["my\\name\\chef", "\"my\\name\\chef\""],
+            'String with double reverse solidus' => ["my\\\\name\\\\chef", "\"my\\\\name\\\\chef\""],
+            'String with solidus' => ["my/name/chef", "\"my/name/chef\""],
+            'String with double solidus' => ["my//name//chef", "\"my//name//chef\""],
+            'String with backspace' => [
+                "Not sure why" . chr(8) . "en you would do this but here it is",
+                "\"Notsurewhyenyouwoulddothisbuthereitis\""
+            ],
+            'String with form feed' => ["Form\ffeed", "\"Formfeed\""],
+            'String with newline' => ["hello\nfriends", "\"hellofriends\""],
+            'String with carriage return' => ["hello\rfriends", "\"hellofriends\""],
+            'String with tabulation' => ["hello\tfriends", "\"hellofriends\""],
+            'String with multibyte UTF-8' => ["哈喽啊👋！我叫芒芒🙈！我很喜欢吃香蕉🍌!", "\"哈喽啊👋！我叫芒芒🙈！我很喜欢吃香蕉🍌!\""]
+        ];
+    }
+
+    /**
+     * Data provider for test_seb_json_encode_randomised.
+     *
+     * @return array List of test cases and expected results.
+     */
+    public function seb_json_encode_randomised_data_provider(): array {
+        $utf8multibytesentences = ["我是你爸爸", "من پدرت هستم", "나는 당신의 아빠입니다", "私はあなたのお父さんです", "я твой папа", "😁😁😁"];
+        $utf8singlebytesentences = ["Hello! How's it going?", "Pretty good, thanks", "The quick brown fox jumps over the lazy dog"];
+
+        return [
+            'A random multibyte UTF-8 sentence' => [$utf8multibytesentences[array_rand($utf8multibytesentences)]],
+            'A random single byte UTF-8 sentence' => [$utf8singlebytesentences[array_rand($utf8singlebytesentences)]]
+        ];
+    }
 }
