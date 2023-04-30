@@ -142,5 +142,23 @@ class helper {
         echo($contents);
     }
 
+    public static function seb_json_encode($data): string {
+        $escapesequences = [
+            "\\\"" => "\u{0022}",
+            "\\\\" => "\u{005C}",
+            "\\/" => "\u{002F}", // possily not needed due to UNESCAPED_SLASHES ?
+            "\\b" => "\u{0008}",
+            "\\f" => "\u{000C}",
+            "\\n" => "\u{000A}",
+            "\\r" => "\u{000D}",
+            "\\t" => "\u{0009}"
+        ];
+
+        return str_replace(
+            array_keys($escapesequences),
+            array_values($escapesequences),
+            json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+        );
+    }
 }
 

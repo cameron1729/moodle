@@ -37,7 +37,6 @@ use CFPropertyList\CFType;
 use \Collator;
 use \DateTime;
 
-
 /**
  * Wrapper for CFPropertyList to handle low level iteration.
  *
@@ -45,9 +44,6 @@ use \DateTime;
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class property_list {
-
-    /** A random 4 character unicode string to replace backslashes during json_encode. */
-    private const BACKSLASH_SUBSTITUTE = "ؼҷҍԴ";
 
     /** @var CFPropertyList $cfpropertylist */
     private $cfpropertylist;
@@ -240,15 +236,7 @@ class property_list {
         // Sort array alphabetically by key using case insensitive, natural sorting. See point 3 for more information.
         $plistarray = $this->array_sort($plistarray);
 
-        // Encode in JSON with following rules from SEB docs.
-        // 1. Don't add any whitespace or line formatting to the SEB-JSON string.
-        // 2. Don't add unicode or slash escaping.
-        $json = json_encode($plistarray, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
-
-        // There is no way to prevent json_encode from escaping backslashes. We replace each backslash with a unique string
-        // prior to encoding in prepare_plist_for_json_encoding(). We can then replace the substitute with a single backslash.
-        $json = str_replace(self::BACKSLASH_SUBSTITUTE, "\\", $json);
-        return $json;
+        return helper::seb_json_encode($plistarray);
     }
 
     /**
@@ -274,10 +262,9 @@ class property_list {
             }
             // Make sure strings are UTF 8 encoded.
             if ($value instanceof CFString) {
-                // As literal backslashes will be lost during encoding, we must replace them with a unique substitute to be
-                // reverted after JSON encoding.
-                $string = str_replace("\\", self::BACKSLASH_SUBSTITUTE, $value->getValue());
-                $value->setValue(mb_convert_encoding($string, 'UTF-8'));
+                if (mb_check_encoding($value->getValue(), "UTF-8") === false) {
+                    throw new \Exception('Invalid PList value: ' . $value . ' - string elements must be UTF-8 encoded.');
+                }
             }
             // Data should remain base 64 encoded, so convert to base encoded string for export. Otherwise
             // CFData will decode the data when serialized.
