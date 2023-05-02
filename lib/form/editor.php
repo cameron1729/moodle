@@ -254,7 +254,7 @@ class MoodleQuickForm_editor extends HTML_QuickForm_element implements templatab
      * @return string Text content
      */
     public function get_text(): string {
-        return $this->_values['text'];
+        return $this->_values['text'] ?? '';
     }
 
     /**
@@ -507,7 +507,25 @@ class MoodleQuickForm_editor extends HTML_QuickForm_element implements templatab
      * @return string
      */
     public function getFrozenHtml(): string {
-        return format_text($this->get_text(), $this->getFormat()) . $this->_getPersistantData();
+        global $USER;
+
+        $options = (object)[
+            'overflowdiv' => true,
+        ];
+
+        $context = context_user::instance($USER->id);
+        $pattern = '/draftfile\.php\/\d+\/user\/draft\/(\d+)\/([^\/]+)/';
+        $text = $this->get_text();
+
+        if (preg_match_all($pattern, $text, $matches)) {
+            foreach ($matches[1] as $index => $draftitemid) {
+                file_save_draft_area_files($draftitemid, $context->id, 'editor', 'frozen', $draftitemid, ['subdirs' => false]);
+                $text = file_rewrite_urls_to_pluginfile($text, $draftitemid);
+                $text = file_rewrite_pluginfile_urls($text, 'pluginfile.php', $context->id, 'editor', 'frozen', $draftitemid);
+            }
+        }
+
+        return format_text($text, $this->getFormat(), $options) . $this->_getPersistantData();
     }
 
     /**
