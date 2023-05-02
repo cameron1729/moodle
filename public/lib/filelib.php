@@ -5316,6 +5316,9 @@ function file_pluginfile($relativepath, $forcedownload, $preview = null, $offlin
         send_file_not_found();
 
     // ========================================================================================================================
+    } else if ($component === 'editor') {
+        require_once($CFG->libdir . '/filelib.php');
+        core_editor_pluginfile($course, $cm, $context, $filearea, $args, $forcedownload, $sendfileoptions);
     } else if (strpos($component, '_') === false) {
         // all core subsystems have to be specified above, no more guessing here!
         send_file_not_found();
@@ -5337,4 +5340,43 @@ function file_pluginfile($relativepath, $forcedownload, $preview = null, $offlin
         send_file_not_found();
     }
 
+}
+
+/**
+ * Serves plugin files related to the MoodleQuickForm_editor content.
+ *
+ * @param stdClass $course the course object
+ * @param stdClass $cm the course module object
+ * @param stdClass $context the context
+ * @param string $filearea the name of the file area
+ * @param array $args extra arguments (itemid, path)
+ * @param bool $forcedownload whether or not force download
+ * @param array $options additional options affecting the file serving
+ */
+function core_editor_pluginfile($course, $cm, $context, $filearea, $args, $forcedownload, array $options = []) {
+    if ($context->contextlevel != CONTEXT_USER) {
+        send_file_not_found();
+    }
+
+    if ($filearea !== 'frozen') {
+        send_file_not_found();
+    }
+
+    require_login($course, false, $cm);
+
+    $itemid = (int)array_shift($args);
+    $filename = array_pop($args);
+    if (!$args) {
+        $filepath = '/';
+    } else {
+        $filepath = '/' . implode('/', $args) . '/';
+    }
+
+    $fs = get_file_storage();
+    $file = $fs->get_file($context->id, 'editor', $filearea, $itemid, $filepath, $filename);
+    if (!$file) {
+        send_file_not_found();
+    }
+
+    send_stored_file($file, 0, 0, $forcedownload, $options);
 }
