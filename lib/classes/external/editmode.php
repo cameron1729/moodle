@@ -38,7 +38,7 @@ class editmode extends external_api {
     public static function change_editmode_parameters(): external_function_parameters {
         return new external_function_parameters(
             [
-                'setmode' => new external_value(PARAM_BOOL, 'Set edit mode to'),
+                'setmode' => new external_value(PARAM_INT, 'Set edit mode to'),
                 'context' => new external_value(PARAM_INT, 'Page context id')
             ]
         );
