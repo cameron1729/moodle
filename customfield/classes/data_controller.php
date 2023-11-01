@@ -24,6 +24,7 @@
 
 namespace core_customfield;
 
+use backup_nested_element;
 use core_customfield\output\field_data;
 
 defined('MOODLE_INTERNAL') || die;
@@ -352,6 +353,9 @@ abstract class data_controller {
         } else {
             return format_string($value, true, ['context' => $this->get_context()]);
         }
+    }
+
+    public function backup_define_structure(backup_nested_element $customfieldelement): void {
     }
 
     /**

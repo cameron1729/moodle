@@ -24,6 +24,8 @@
 
 namespace customfield_textarea;
 
+use backup_nested_element;
+
 defined('MOODLE_INTERNAL') || die;
 
 /**
@@ -154,6 +156,14 @@ class data_controller extends \core_customfield\data_controller {
      */
     public function get_default_value() {
         return $this->get_field()->get_configdata_property('defaultvalue');
+    }
+
+    public function backup_define_structure(backup_nested_element $customfieldelement): void {
+        // load file record (or can it be multiple records?)
+        // $filerecord =
+
+        // Add it to the backup
+        // $customfieldelement->annotate_files(blah...);
     }
 
     /**

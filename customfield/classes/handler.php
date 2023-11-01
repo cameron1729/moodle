@@ -24,6 +24,7 @@
 
 namespace core_customfield;
 
+use backup_nested_element;
 use core_customfield\output\field_data;
 use stdClass;
 
@@ -494,6 +495,15 @@ abstract class handler {
      */
     protected function can_backup(field_controller $field, int $instanceid) : bool {
         return $this->can_view($field, $instanceid) || $this->can_edit($field, $instanceid);
+    }
+
+    public function backup_define_structure(int $instanceid, backup_nested_element $customfieldselement): void {
+        $data = $this->get_instance_data($instanceid);
+        foreach ($data as $d) {
+            if ($this->can_backup($d->get_field(), $instanceid)) {
+                $d->backup_define_structure($customfieldselement);
+            }
+        }
     }
 
     /**
