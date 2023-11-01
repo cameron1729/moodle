@@ -234,7 +234,7 @@ class course_handler extends \core_customfield\handler {
                     $d->set('contextid', $context->id);
                     $d->save();
                 }
-                return;
+                return $d->get('id');
             }
         }
     }

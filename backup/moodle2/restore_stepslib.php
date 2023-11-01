@@ -2006,9 +2006,13 @@ class restore_course_structure_step extends restore_structure_step {
      *
      * @param array $data
      */
-    public function process_customfield($data) {
+    public function process_customfield($data): void {
         $handler = core_course\customfield\course_handler::create();
-        $handler->restore_instance_data_from_backup($this->task, $data);
+        $newid = $handler->restore_instance_data_from_backup($this->task, $data);
+
+        $data = (object) $data;
+        $oldid = $data->id;
+        $handler->restore_define_structure($this, $newid, $oldid);
     }
 
     /**

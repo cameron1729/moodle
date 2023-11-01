@@ -24,6 +24,7 @@
 
 namespace core_customfield;
 
+use backup_nested_element;
 use core_customfield\output\field_data;
 use stdClass;
 
@@ -494,6 +495,35 @@ abstract class handler {
      */
     protected function can_backup(field_controller $field, int $instanceid) : bool {
         return $this->can_view($field, $instanceid) || $this->can_edit($field, $instanceid);
+    }
+
+    /**
+     * Run the custom field backup callback for each controller.
+     * @param int $instanceid
+     * @param \backup_nested_element $customfieldselement
+     * @return void
+     */
+    public function backup_define_structure(int $instanceid, backup_nested_element $customfieldselement): void {
+        $datacontrollers = $this->get_instance_data($instanceid);
+        foreach ($datacontrollers as $controller) {
+            if ($this->can_backup($controller->get_field(), $instanceid)) {
+                $controller->backup_define_structure($customfieldselement);
+            }
+        }
+    }
+
+    /**
+     * Run the custom field restore callback for each controller.
+     * @param \restore_structure_step $step
+     * @param int $newid
+     * @param int $oldid
+     * @return void
+     */
+    public function restore_define_structure(\restore_structure_step $step, $newid, $oldid): void {
+        $datacontrollers = $this->get_instance_data($newid);
+        foreach ($datacontrollers as $controller) {
+            $controller->restore_define_structure($step, $newid, $oldid);
+        }
     }
 
     /**

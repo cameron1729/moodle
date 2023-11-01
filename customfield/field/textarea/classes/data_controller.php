@@ -24,6 +24,8 @@
 
 namespace customfield_textarea;
 
+use backup_nested_element;
+
 defined('MOODLE_INTERNAL') || die;
 
 /**
@@ -177,6 +179,27 @@ class data_controller extends \core_customfield\data_controller {
      */
     public function get_default_value() {
         return $this->get_field()->get_configdata_property('defaultvalue');
+    }
+
+    /**
+     * Implement the backup callback in order to include embedded files.
+     * @param \backup_nested_element $customfieldelement
+     * @return void
+     */
+    public function backup_define_structure(backup_nested_element $customfieldelement): void {
+        $customfieldelement->annotate_files('customfield_textarea', 'value', 'id');
+    }
+
+    /**
+     * Implement the restore callback in order to restore embedded files.
+     * @param \restore_structure_step $step
+     * @param int $newid
+     * @param int $oldid
+     * @return void
+     */
+    public function restore_define_structure(\restore_structure_step $step, $newid, $oldid): void {
+        $step->set_mapping('customfield_data', $oldid, $newid, true);
+        $step->add_related_files('customfield_textarea', 'value', 'customfield_data');
     }
 
     /**
