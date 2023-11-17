@@ -186,7 +186,7 @@ class data_controller extends \core_customfield\data_controller {
      * @param \backup_nested_element $customfieldelement
      * @return void
      */
-    public function backup_define_structure(backup_nested_element $customfieldelement): void {
+    public function backup_define_structure(int $courseid, backup_nested_element $customfieldelement): void {
         $customfieldelement->annotate_files('customfield_textarea', 'value', 'id');
     }
 
