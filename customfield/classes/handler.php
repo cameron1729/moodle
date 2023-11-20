@@ -516,7 +516,7 @@ abstract class handler {
         }
 
         foreach ($representative as $controller) {
-            $controller->backup_define_structure($courseid, $customfieldselement);
+            $controller->backup_define_structure($customfieldselement);
         }
     }
 
