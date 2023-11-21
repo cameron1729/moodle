@@ -187,7 +187,11 @@ class data_controller extends \core_customfield\data_controller {
      * @return void
      */
     public function backup_define_structure(backup_nested_element $customfieldelement): void {
-        $customfieldelement->annotate_files('customfield_textarea', 'value', 'id');
+        $annotations = $customfieldelement->get_file_annotations();
+
+        if (!isset($annotations['customfield_textarea']['value'])) {
+            $customfieldelement->annotate_files('customfield_textarea', 'value', 'id');
+        }
     }
 
     /**
@@ -198,8 +202,10 @@ class data_controller extends \core_customfield\data_controller {
      * @return void
      */
     public function restore_define_structure(\restore_structure_step $step, $newid, $oldid): void {
-        $step->set_mapping('customfield_data', $oldid, $newid, true);
-        $step->add_related_files('customfield_textarea', 'value', 'customfield_data');
+        if (!$step->get_mappingid('customfield_data', $oldid)) {
+            $step->set_mapping('customfield_data', $oldid, $newid, true);
+            $step->add_related_files('customfield_textarea', 'value', 'customfield_data');
+        }
     }
 
     /**

@@ -509,14 +509,8 @@ abstract class handler {
 
         foreach ($datacontrollers as $controller) {
             if ($this->can_backup($controller->get_field(), $courseid)) {
-                if (!array_key_exists($controller->name, $representative)) {
-                    $representative[$controller->name] = $controller;
-                }
+                $controller->backup_define_structure($customfieldselement);
             }
-        }
-
-        foreach ($representative as $controller) {
-            $controller->backup_define_structure($customfieldselement);
         }
     }
 
@@ -529,15 +523,8 @@ abstract class handler {
      */
     public function restore_define_structure(\restore_structure_step $step, $newid, $oldid): void {
         $datacontrollers = $this->get_instance_data($newid);
-        $representative = [];
 
         foreach ($datacontrollers as $controller) {
-            if (!array_key_exists($controller->name, $representative)) {
-                $representative[$controller->name] = $controller;
-            }
-        }
-
-        foreach ($representative as $controller) {
             $controller->restore_define_structure($step, $newid, $oldid);
         }
     }

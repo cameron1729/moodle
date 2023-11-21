@@ -2010,9 +2010,11 @@ class restore_course_structure_step extends restore_structure_step {
         $handler = core_course\customfield\course_handler::create();
         $newid = $handler->restore_instance_data_from_backup($this->task, $data);
 
-        $data = (object) $data;
-        $oldid = $data->id;
-        $handler->restore_define_structure($this, $newid, $oldid);
+        if ($newid) {
+            $data = (object) $data;
+            $oldid = $data->id;
+            $handler->restore_define_structure($this, $newid, $oldid);
+        }
     }
 
     /**
