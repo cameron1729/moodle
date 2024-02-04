@@ -1550,6 +1550,12 @@ class global_navigation extends navigation_node {
 
                 // Add the essentials such as reports etc...
                 $this->add_course_essentials($coursenode, $course);
+
+                $oldparticipantsnode = $this->rootnodes['site']->find('participants', self::TYPE_CUSTOM);
+                if ($oldparticipantsnode) {
+                    $oldparticipantsnode->remove();
+                }
+
                 // Extend course navigation with it's sections/activities
                 $this->load_course_sections($course, $coursenode);
                 if (!$coursenode->contains_active_node() && !$coursenode->search_for_active_node()) {

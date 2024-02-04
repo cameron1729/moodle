@@ -16,6 +16,7 @@
 
 namespace core\navigation\views;
 
+use coding_exception;
 use navigation_node;
 use url_select;
 use settings_navigation;
@@ -407,9 +408,12 @@ class secondary extends view {
 
         // Add the known nodes from settings and navigation.
         $nodes = $this->get_default_course_mapping();
-        $nodesordered = $this->get_leaf_nodes($settingsnav, $nodes['settings'] ?? []);
-        $nodesordered += $this->get_leaf_nodes($navigation, $nodes['navigation'] ?? []);
-        $this->add_ordered_nodes($nodesordered, $rootnode);
+        $nodetuples = array_merge(
+           $this->get_leaf_node_tuples($settingsnav, $nodes['settings'] ?? []),
+           $this->get_leaf_node_tuples($navigation, $nodes['navigation'] ?? [])
+        );
+
+        $this->add_ordered_node_tuples($nodetuples, $rootnode);
 
         // Try to get any custom nodes defined by plugins, which may include containers.
         if ($courseadminnode) {
@@ -710,9 +714,10 @@ class secondary extends view {
             if ($setactive) {
                 $node->make_active();
             }
+
             // Add the initial nodes.
-            $nodesordered = $this->get_leaf_nodes($mainnode, $nodes);
-            $this->add_ordered_nodes($nodesordered, $rootnode);
+            $nodetuples = $this->get_leaf_node_tuples($mainnode, $nodes);
+            $this->add_ordered_node_tuples($nodetuples, $rootnode);
 
             // We have finished inserting the initial structure.
             // Populate the menu with the rest of the nodes available.
@@ -733,8 +738,8 @@ class secondary extends view {
             $this->add(get_string('category'), $url, self::TYPE_CONTAINER, null, 'categorymain');
 
             // Add the initial nodes.
-            $nodesordered = $this->get_leaf_nodes($mainnode, $nodes);
-            $this->add_ordered_nodes($nodesordered);
+            $nodetuples = $this->get_leaf_node_tuples($mainnode, $nodes);
+            $this->add_ordered_node_tuples($nodetuples);
 
             // We have finished inserting the initial structure.
             // Populate the menu with the rest of the nodes available.
@@ -795,6 +800,55 @@ class secondary extends view {
             // If the key is a string then we are assuming this is a nested element.
             if (is_string($key)) {
                 $parentnode = $nodes[floor($key)] ?? null;
+                if ($parentnode) {
+                    $parentnode->add_node(clone $node);
+                }
+            } else {
+                $rootnode->add_node(clone $node);
+            }
+        }
+    }
+
+    /**
+     * Adds the node tuples to the current view or a given node.
+     *
+     * Any sub nodes locations must be specified in the form parent.location (e.g., a node with a location of3.2
+     * would become the 2nd child of the node with location 3).
+     *
+     * @param array $nodetuples An array of tuples of the form ['node' => $node, 'location' => $location] to be added.
+     *                          where the node key is the navigation node and the location key is the desired location
+     *                          to add it.
+     * @param navigation_node|null $rootnode The node where the nodes should be added into as children. If not explicitly
+     *                                       defined, the nodes will be added to the secondary root node by default.
+     * @throws coding_exception When it's not possible to uniquely identify a parent node.
+     */
+    protected function add_ordered_node_tuples(array $nodetuples, ?navigation_node $rootnode = null): void {
+        $rootnote = $rootnode ?? $this;
+        usort($nodetuples, fn(array $a, array $b): int => $a['location'] <=> $b['location']);
+
+        $locations = array_column($nodetuples, 'location');
+
+        // A mapping between locations an nodes. This is used in the case where a node specifies
+        // its location as something like 3.2. In that case we need to find the node that specifies
+        // it's location as 3 so we can add the 3.2 node as a child to it. This mapping will return
+        // the index (or indices) in the $nodetuples array which have locations specified as 3.
+        $locationmap = array_map(
+            fn(float $location): array => array_keys($locations, $location),
+            array_combine(array_unique($locations), array_unique($locations))
+        );
+
+        foreach ($nodetuples as ['node' => $node, 'location' => $location]) {
+            // This is the case where we have a location like 3.2 and need to find
+            // the node(s) with location 3.
+            if (is_float($location)) {
+                $parenttupleindices = $locationmap[floor($location)];
+
+                if (count($parenttupleindices) > 1) {
+                    $potentialnodes = array_map(fn($index) => $nodetuples[$index]['node']->key, $parenttupleindices);
+                    throw new coding_exception('Ambiguous parent node ' . $location . ' can refer to ' . implode(', ', $potentialnodes));
+                }
+
+                $parentnode = $nodetuples[$parenttupleindices[0]]['node'] ?? null;
                 if ($parentnode) {
                     $parentnode->add_node(clone $node);
                 }

@@ -66,8 +66,8 @@ class secondary extends core_secondary {
             }
 
             // Add the initial nodes.
-            $nodesordered = $this->get_leaf_nodes($mainnode, $nodes);
-            $this->add_ordered_nodes($nodesordered, $rootnode);
+            $nodetuples = $this->get_leaf_node_tuples($mainnode, $nodes);
+            $this->add_ordered_node_tuples($nodetuples, $rootnode);
 
             // Reorder the existing nodes in settings so the active node scan can pick it up.
             $existingnode = $settingsnav->find('questionnode', self::TYPE_CUSTOM);

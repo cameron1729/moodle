@@ -82,6 +82,26 @@ abstract class view extends navigation_node {
     }
 
     /**
+     * Get the leaf nodes for the nav view as tuples.
+     *
+     * @param navigation_node $source The settingsnav OR navigation object
+     * @param array $nodes An array of nodes to fetch from the source which specifies the node type and final order
+     * @return array An array of tuples of the form ['node' => $node, 'location' => $location] where the node key
+     *               is the loaded node and the location key is the desired location of the node.
+     */
+    protected function get_leaf_node_tuples(navigation_node $source, array $nodes): array {
+        $totuples = fn(array $ordering, int $type): array => array_map(
+            fn(string $key): array => ['node' => $source->find($key, $type), 'location' => $ordering[$key]],
+            array_keys($ordering)
+        );
+
+        return array_filter(
+            array_merge(...array_map(fn($t) => $totuples($nodes[$t], $t), array_keys($nodes))),
+            fn(array $t): bool => $t['node'] !== false
+        );
+    }
+
+    /**
      * Scan the given node for the active node. It starts first with a strict search and then switches to a base search if
      * required.
      *
