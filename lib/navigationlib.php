@@ -2937,6 +2937,22 @@ class global_navigation extends navigation_node {
 
         //Participants
         if ($navoptions->participants) {
+            // The add_front_page_course_essentials method (defined in this class) also adds a 'participants'
+            // node of TYPE_CUSTOM which we don't need; and it causes issues with navigation view ordering
+            // implemented in MDL-80779.
+            //
+            // There are places in core that call both add_front_page_course_essentials and add_course_essentials
+            // (e.g., global_navigation::initialise) which results in two 'participants' nodes. We don't know
+            // which order these methods are called in, but we don't want two 'participants' nodes. So we check
+            // here if the TYPE_CUSTOM one has already been added, and if it has, we remove it.
+            //
+            // Because we don't know the order these two methods are called in, there is similar code in
+            // add_front_page_course_essentials.
+            $oldparticipantsnode = $this->rootnodes['site']->find('participants', self::TYPE_CUSTOM);
+            if ($oldparticipantsnode) {
+                $oldparticipantsnode->remove();
+            }
+
             $participants = $coursenode->add(get_string('participants'), new moodle_url('/user/index.php?id='.$course->id),
                 self::TYPE_CONTAINER, get_string('participants'), 'participants', new pix_icon('i/users', ''));
 
@@ -3029,8 +3045,22 @@ class global_navigation extends navigation_node {
 
         // Participants.
         if ($navoptions->participants) {
-            $coursenode->add(get_string('participants'), new moodle_url('/user/index.php?id='.$course->id),
-                self::TYPE_CUSTOM, get_string('participants'), 'participants');
+            // The add_front_page_course_essentials method (defined in this class) also adds a 'participants'
+            // node of TYPE_CUSTOM which we don't need; and it causes issues with navigation view ordering
+            // implemented in MDL-80779.
+            //
+            // There are places in core that call both add_front_page_course_essentials and add_course_essentials
+            // (e.g., global_navigation::initialise) which results in two 'participants' nodes. We don't know which
+            // order these methods are called in, but we don't want two 'participants' nodes. So we check here if
+            // the TYPE_CUSTOM one has already been added, and if it has, we remove it.
+            //
+            // Because we don't know the order these two methods are called in, there is similar code in
+            // add_front_page_course_essentials.
+            $oldparticipantsnode = $coursenode->find('participants', self::TYPE_CUSTOM);
+            if (!$oldparticipantsnode) {
+                $coursenode->add(get_string('participants'), new moodle_url('/user/index.php?id='.$course->id),
+                    self::TYPE_CUSTOM, get_string('participants'), 'participants');
+            }
         }
 
         // Blogs.
