@@ -10071,6 +10071,38 @@ function partial() {
 }
 
 /**
+ * Helper function to curry a callable. Example usage:
+ *
+ * // A curried str_contains. Calling it with a single string will produce a partially
+ * // applied str_contains. See below.
+ * $curried = curry('str_contains');
+ *
+ * // Partially applied str_contains. The haystack is fixed at "my name is jeff".
+ * // We now have a function that you can pass any string, and it will tell you
+ * // if said string is present in "my name is jeff".
+ * $findinstr = $curried('my name is jeff');
+ *
+ * // Is "jeff" in "my name is jeff"?
+ * var_dump($findinstr('jeff')); // bool(true)
+ *
+ * // What about "chef"?
+ * var_dump($findinstr('chef')); // bool(false)
+ *
+ * @param callable $callable A callable.
+ * @param array $collected Arguments that have been "collected" as successive curried calls are made.
+ *                         Should be omitted in most cases of calling code.
+ * @return callable
+ */
+function curry(callable $callable, array $collected = []): callable {
+    $arity = count((new ReflectionFunction(Closure::fromCallable($callable)))->getParameters());
+    return match(true) {
+        $arity === 0 => fn(): mixed => $callable(),
+        count($collected) === $arity - 1 => fn(mixed $arg): mixed => $callable(...[...$collected, $arg]),
+        default => fn(mixed $arg): callable => curry($callable, [...$collected, $arg])
+    };
+}
+
+/**
  * helper function to load up and initialise the mnet environment
  * this must be called before you use mnet functions.
  *
