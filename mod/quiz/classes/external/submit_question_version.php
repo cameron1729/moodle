@@ -22,11 +22,12 @@ require_once($CFG->dirroot . '/question/engine/lib.php');
 require_once($CFG->dirroot . '/question/engine/datalib.php');
 require_once($CFG->libdir . '/questionlib.php');
 
+use core\context\module;
 use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
-use stdClass;
+use mod_quiz\quiz_settings;
 
 /**
  * External api for changing the question version in the quiz.
@@ -59,32 +60,15 @@ class submit_question_version extends external_api {
      */
     public static function execute(int $slotid, int $newversion): array {
         global $DB;
-        $params = [
-            'slotid' => $slotid,
-            'newversion' => $newversion
-        ];
-        $params = self::validate_parameters(self::execute_parameters(), $params);
-        $response = [];
-        // Get the required data.
-        $referencedata = $DB->get_record('question_references',
-            ['itemid' => $params['slotid'], 'component' => 'mod_quiz', 'questionarea' => 'slot']);
-        $slotdata = $DB->get_record('quiz_slots', ['id' => $slotid]);
+        $params = self::validate_parameters(self::execute_parameters(), ['slotid' => $slotid, 'newversion' => $newversion]);
+        $slot = $DB->get_record('quiz_slots', ['id' => $slotid], '*', MUST_EXIST);
 
-        // Capability check.
-        [, $cm] = get_course_and_cm_from_instance($slotdata->quizid, 'quiz');
-        $context = \context_module::instance($cm->id);
+        $context = module::instance(get_course_and_cm_from_instance($slot->quizid, 'quiz')[1]->id);
         self::validate_context($context);
         require_capability('mod/quiz:manage', $context);
 
-        $reference = new stdClass();
-        $reference->id = $referencedata->id;
-        if ($params['newversion'] === 0) {
-            $reference->version = null;
-        } else {
-            $reference->version = $params['newversion'];
-        }
-        $response['result'] = $DB->update_record('question_references', $reference);
-        return $response;
+        $quizobj = quiz_settings::create($slot->quizid);
+        return ['result' => $quizobj->get_structure()->update_slot_version($slot->id, $params['newversion'])];
     }
 
     /**

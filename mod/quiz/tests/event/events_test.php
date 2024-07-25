@@ -28,6 +28,7 @@ namespace mod_quiz\event;
 use mod_quiz\quiz_attempt;
 use mod_quiz\quiz_settings;
 use context_module;
+use mod_quiz\external\submit_question_version;
 
 /**
  * Unit tests for quiz events.
@@ -67,6 +68,10 @@ class events_test extends \advanced_testcase {
         $cat = $questiongenerator->create_question_category();
         $saq = $questiongenerator->create_question('shortanswer', null, ['category' => $cat->id]);
         $numq = $questiongenerator->create_question('numerical', null, ['category' => $cat->id]);
+
+        // Update the numq question so it has multiple versions. Needed to test
+        // the version updated event.
+        $questiongenerator->update_question($numq, null, ['name' => 'Second version of numq']);
 
         // Add them to the quiz.
         quiz_add_quiz_question($saq->id, $quiz);
@@ -1198,6 +1203,29 @@ class events_test extends \advanced_testcase {
 
         // Check that the event data is valid.
         $this->assertInstanceOf('\mod_quiz\event\slot_mark_updated', $event);
+        $this->assertEquals($quizobj->get_context(), $event->get_context());
+        $this->assertEventContextNotUsed($event);
+    }
+
+    /**
+     * Test the slot version updated event.
+     *
+     * @covers \mod_quiz\external\submit_question_version
+     */
+    public function test_slot_version_updated(): void {
+        $quizobj = $this->prepare_quiz();
+        $this->setAdminUser();
+
+        $quizobj->preload_questions();
+        [, $numqslotid] = array_column($quizobj->get_questions(null, false), 'slotid');
+
+        $sink = $this->redirectEvents();
+        submit_question_version::execute($numqslotid, 2);
+        $events = $sink->get_events();
+        $event = reset($events);
+
+        // Check that the event data is valid.
+        $this->assertInstanceOf('\mod_quiz\event\slot_version_updated', $event);
         $this->assertEquals($quizobj->get_context(), $event->get_context());
         $this->assertEventContextNotUsed($event);
     }

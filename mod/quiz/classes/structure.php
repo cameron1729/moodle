@@ -24,6 +24,7 @@ use mod_quiz\event\quiz_grade_item_deleted;
 use mod_quiz\event\quiz_grade_item_updated;
 use mod_quiz\event\slot_grade_item_updated;
 use mod_quiz\event\slot_mark_updated;
+use mod_quiz\event\slot_version_updated;
 use mod_quiz\question\bank\qbank_helper;
 use mod_quiz\question\qubaids_for_quiz;
 use stdClass;
@@ -1166,6 +1167,36 @@ class structure {
 
         $transaction->allow_commit();
         return true;
+    }
+
+    /**
+     * Update slot question version.
+     *
+     * @param int $id ID of row from the quiz_slots table.
+     * @param int $newversion The new question version for the slot.
+     * @return bool
+     */
+    public function update_slot_version(int $id, int $newversion): bool {
+        global $DB;
+
+        $slot = $this->get_slot_by_id($id);
+        $context = $this->quizobj->get_context();
+        $params = ['usingcontextid' => $context->id, 'component' => 'mod_quiz', 'questionarea' => 'slot', 'itemid' => $slot->id];
+        $reference = $DB->get_record('question_references', $params, '*', MUST_EXIST);
+        $oldversion = $reference->version;
+        $reference->version = $newversion === 0 ? null : $newversion;
+
+        slot_version_updated::create([
+            'context' => $this->quizobj->get_context(),
+            'objectid' => $slot->id,
+            'other' => [
+                'quizid' => $this->get_quizid(),
+                'previousversion' => $oldversion ?? get_string('alwayslatest', 'quiz'),
+                'newversion' => $reference->version ?? get_string('alwayslatest', 'quiz'),
+            ],
+        ])->trigger();
+
+        return $DB->update_record('question_references', $reference);
     }
 
     /**
