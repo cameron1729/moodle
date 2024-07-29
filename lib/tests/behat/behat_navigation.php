@@ -1026,6 +1026,22 @@ class behat_navigation extends behat_base {
     }
 
     /**
+     * @When I update the link with selector :selector to go nowhere
+     */
+    public function i_update_the_link_to_go_nowhere(string $selector) {
+        $script = <<<JS
+            var link = document.querySelector('$selector');
+            if (link) {
+                link.setAttribute('href', '#');
+            } else {
+                throw new Error('No element found with the selector: $selector');
+            }
+        JS;
+
+        $this->getSession()->executeScript($script);
+    }
+
+    /**
      * Opens the course homepage. (Consider using 'I am on the "shortname" "Course" page' step instead.)
      *
      * @Given /^I am on "(?P<coursefullname_string>(?:[^"]|\\")*)" course homepage$/
