@@ -45,7 +45,6 @@ const setQuestionVersion = (slotId, newVersion) => fetchMany([{
  */
 const registerEventListeners = () => {
     document.addEventListener('change', e => {
-        window.console.log('changed');
         if (!e.target.matches('[data-action="mod_quiz-select_slot"][data-slot-id]')) {
             return;
         }

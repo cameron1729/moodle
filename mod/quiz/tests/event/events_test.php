@@ -1221,8 +1221,12 @@ class events_test extends \advanced_testcase {
         $event = reset($events);
 
         // Check that the event data is valid.
+        $expecteddesc = "The user with id '2' updated the slot with id '$numqslotid' " .
+            "belonging to the quiz with course module id '{$quizobj->get_cmid()}'. " .
+            "Its question version was changed from 'Always latest' to '2'.";
         $this->assertInstanceOf('\mod_quiz\event\slot_version_updated', $event);
         $this->assertEquals($quizobj->get_context(), $event->get_context());
+        $this->assertEquals($expecteddesc, $event->get_description());
         $this->assertEventContextNotUsed($event);
     }
 

@@ -1185,7 +1185,7 @@ class structure {
         $context = $this->quizobj->get_context();
         $refparams = ['usingcontextid' => $context->id, 'component' => 'mod_quiz', 'questionarea' => 'slot', 'itemid' => $slot->id];
         $reference = $DB->get_record('question_references', $refparams, '*', MUST_EXIST);
-        $oldversion = (int)$reference->version;
+        $oldversion = is_null($reference->version) ? null : (int) $reference->version;
         $reference->version = $newversion === 0 ? null : $newversion;
         $existsparams = ['questionbankentryid' => $reference->questionbankentryid, 'version' => $newversion];
         $versionexists = $DB->record_exists('question_versions', $existsparams);

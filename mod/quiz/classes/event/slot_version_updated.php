@@ -51,11 +51,7 @@ class slot_version_updated extends \core\event\base {
         return get_string('eventslotversionupdated', 'mod_quiz');
     }
 
-    /**
-     * Get event description.
-     *
-     * @return string
-     */
+    #[\Override]
     public function get_description(): string {
         $previousversion = $this->other['previousversion'] ?? 'Always latest';
         $newversion = $this->other['newversion'] ?? 'Always latest';
@@ -64,18 +60,12 @@ class slot_version_updated extends \core\event\base {
             "Its question version was changed from '$previousversion' to '$newversion'.";
     }
 
-    /**
-     * Get associated URL.
-     *
-     * @return url
-     */
+    #[\Override]
     public function get_url(): url {
         return new url('/mod/quiz/edit.php', ['cmid' => $this->contextinstanceid]);
     }
 
-    /**
-     * Validate event data.
-     */
+    #[\Override]
     protected function validate_data(): void {
         parent::validate_data();
 
@@ -91,29 +81,23 @@ class slot_version_updated extends \core\event\base {
             throw new coding_exception('The \'quizid\' value must be set in other.');
         }
 
-        if (!isset($this->other['previousversion'])) {
+        // The value of previousversion and newversion can be null, so we check if
+        // the array key exists.
+        if (!array_key_exists('previousversion', $this->other)) {
             throw new coding_exception('The \'previousversion\' value must be set in other.');
         }
 
-        if (!isset($this->other['newversion'])) {
+        if (!array_key_exists('newversion', $this->other)) {
             throw new coding_exception('The \'newversion\' value must be set in other.');
         }
     }
 
-    /**
-     * Get object ID mapping.
-     *
-     * @return array
-     */
+    #[\Override]
     public static function get_objectid_mapping(): array {
         return ['db' => 'quiz_slots', 'restore' => 'quiz_question_instance'];
     }
 
-    /**
-     * Get other mapping.
-     *
-     * @return array
-     */
+    #[\Override]
     public static function get_other_mapping(): array {
         $othermapped = [];
         $othermapped['quizid'] = ['db' => 'quiz', 'restore' => 'quiz'];
