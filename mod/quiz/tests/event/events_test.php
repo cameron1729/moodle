@@ -37,6 +37,7 @@ use mod_quiz\external\submit_question_version;
  * @category   phpunit
  * @copyright  2013 Adrian Greeve
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers \mod_quiz\external\submit_question_version
  */
 class events_test extends \advanced_testcase {
 
@@ -1207,11 +1208,6 @@ class events_test extends \advanced_testcase {
         $this->assertEventContextNotUsed($event);
     }
 
-    /**
-     * Test the slot version updated event.
-     *
-     * @covers \mod_quiz\external\submit_question_version
-     */
     public function test_slot_version_updated(): void {
         $quizobj = $this->prepare_quiz();
         $this->setAdminUser();

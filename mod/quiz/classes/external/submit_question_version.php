@@ -46,19 +46,20 @@ class submit_question_version extends external_api {
      */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'slotid' => new external_value(PARAM_INT, ''),
-            'newversion' => new external_value(PARAM_INT, '')
+            'slotid' => new external_value(PARAM_INT),
+            'newversion' => new external_value(PARAM_INT),
         ]);
     }
 
     /**
      * Set the questions slot parameters to display the question template.
      *
-     * @param int $slotid Slot id to display.
-     * @param int $newversion the version to set. 0 means 'always latest'.
+     * @param int $slotid Slot ID to display.
+     * @param int|null $newversion The version to set. Passing null means 'always latest'.
+     *                             For historical reasons, 0 also means 'always latest'.
      * @return array
      */
-    public static function execute(int $slotid, int $newversion): array {
+    public static function execute(int $slotid, ?int $newversion): array {
         global $DB;
         $params = self::validate_parameters(self::execute_parameters(), ['slotid' => $slotid, 'newversion' => $newversion]);
         $slot = $DB->get_record('quiz_slots', ['id' => $slotid], '*', MUST_EXIST);
@@ -68,7 +69,12 @@ class submit_question_version extends external_api {
         require_capability('mod/quiz:manage', $context);
 
         $quizobj = quiz_settings::create($slot->quizid);
-        return ['result' => $quizobj->get_structure()->update_slot_version($slot->id, $params['newversion'])];
+
+        // This WS historically (and wrongly) accepted 0 to mean 'always latest'. The correct behaviour
+        // is that null implies awlays latest. To preserve backwards compatibility, we continue to accept
+        // 0, but just turn it in to null before passing to the appropriate API. See: MDL-82587.
+        $newversionnormalised = $params['newversion'] === 0 ? null : $params['newversion'];
+        return ['result' => $quizobj->get_structure()->update_slot_version($slot->id, $newversionnormalised)];
     }
 
     /**

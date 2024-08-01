@@ -1170,33 +1170,53 @@ class structure {
     }
 
     /**
-     * Update slot question version.
+     * Update the question version for a given slot, if necessary.
      *
      * @param int $id ID of row from the quiz_slots table.
-     * @param int $newversion The new question version for the slot.
-     * @return bool
+     * @param int|null $newversion The new question version for the slot.
+     *                             A null value means 'Always latest'.
+     * @return bool True if the version was updated, false if no update was required.
+     * @throws coding_exception If the specified version does not exist.
      */
-    public function update_slot_version(int $id, int $newversion): bool {
+    public function update_slot_version(int $id, ?int $newversion): bool {
         global $DB;
 
         $slot = $this->get_slot_by_id($id);
         $context = $this->quizobj->get_context();
-        $params = ['usingcontextid' => $context->id, 'component' => 'mod_quiz', 'questionarea' => 'slot', 'itemid' => $slot->id];
-        $reference = $DB->get_record('question_references', $params, '*', MUST_EXIST);
-        $oldversion = $reference->version;
+        $refparams = ['usingcontextid' => $context->id, 'component' => 'mod_quiz', 'questionarea' => 'slot', 'itemid' => $slot->id];
+        $reference = $DB->get_record('question_references', $refparams, '*', MUST_EXIST);
+        $oldversion = (int)$reference->version;
         $reference->version = $newversion === 0 ? null : $newversion;
+        $existsparams = ['questionbankentryid' => $reference->questionbankentryid, 'version' => $newversion];
+        $versionexists = $DB->record_exists('question_versions', $existsparams);
 
+        // We are attempting to switch to an existing version.
+        // Verify that the version we want to switch to exists.
+        if (!is_null($newversion) && !$versionexists) {
+            throw new coding_exception(
+                'Version: ' . $newversion . ' ' .
+                'does not exist for question bank entry: ' . $reference->questionbankentryid
+            );
+        }
+
+        if ($newversion === $oldversion) {
+            return false;
+        }
+
+        $transaction = $DB->start_delegated_transaction();
+        $DB->update_record('question_references', $reference);
         slot_version_updated::create([
             'context' => $this->quizobj->get_context(),
             'objectid' => $slot->id,
             'other' => [
                 'quizid' => $this->get_quizid(),
-                'previousversion' => $oldversion ?? get_string('alwayslatest', 'quiz'),
-                'newversion' => $reference->version ?? get_string('alwayslatest', 'quiz'),
+                'previousversion' => $oldversion,
+                'newversion' => $reference->version,
             ],
         ])->trigger();
+        $transaction->allow_commit();
 
-        return $DB->update_record('question_references', $reference);
+        return true;
     }
 
     /**

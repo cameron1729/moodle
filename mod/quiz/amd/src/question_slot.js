@@ -45,6 +45,7 @@ const setQuestionVersion = (slotId, newVersion) => fetchMany([{
  */
 const registerEventListeners = () => {
     document.addEventListener('change', e => {
+        window.console.log('changed');
         if (!e.target.matches('[data-action="mod_quiz-select_slot"][data-slot-id]')) {
             return;
         }
@@ -52,7 +53,7 @@ const registerEventListeners = () => {
         const slotId = e.target.dataset.slotId;
         const newVersion = parseInt(e.target.value);
 
-        setQuestionVersion(slotId, newVersion)
+        setQuestionVersion(slotId, newVersion === 0 ? null : newVersion)
             .then(() => {
                 location.reload();
                 return;
@@ -61,16 +62,9 @@ const registerEventListeners = () => {
     });
 };
 
-/** @property {Boolean} eventsRegistered If the event has been registered or not */
-let eventsRegistered = false;
-
 /**
  * Entrypoint of the js.
  */
 export const init = () => {
-    if (eventsRegistered) {
-        return;
-    }
-
     registerEventListeners();
 };

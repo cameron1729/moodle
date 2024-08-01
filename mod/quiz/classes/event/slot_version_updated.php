@@ -39,20 +39,14 @@ use core\url;
  */
 class slot_version_updated extends \core\event\base {
 
-    /**
-     * Initialise the event.
-     */
+    #[\Override]
     protected function init(): void {
         $this->data['objecttable'] = 'quiz_slots';
         $this->data['crud'] = 'u';
         $this->data['edulevel'] = self::LEVEL_TEACHING;
     }
 
-    /**
-     * Get event name.
-     *
-     * @return string
-     */
+    #[\Override]
     public static function get_name(): string {
         return get_string('eventslotversionupdated', 'mod_quiz');
     }
@@ -63,9 +57,11 @@ class slot_version_updated extends \core\event\base {
      * @return string
      */
     public function get_description(): string {
+        $previousversion = $this->other['previousversion'] ?? 'Always latest';
+        $newversion = $this->other['newversion'] ?? 'Always latest';
         return "The user with id '$this->userid' updated the slot with id '{$this->objectid}' " .
             "belonging to the quiz with course module id '$this->contextinstanceid'. " .
-            "Its question version was changed from '{$this->other['previousversion']}' to '{$this->other['newversion']}'.";
+            "Its question version was changed from '$previousversion' to '$newversion'.";
     }
 
     /**
