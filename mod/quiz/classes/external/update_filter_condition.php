@@ -22,10 +22,12 @@ require_once($CFG->libdir . '/externallib.php');
 require_once($CFG->dirroot . '/question/editlib.php');
 require_once($CFG->dirroot . '/mod/quiz/locallib.php');
 
-use external_function_parameters;
-use external_single_structure;
-use external_value;
-use external_api;
+use core\context\module;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
+use core_external\external_api;
+use mod_quiz\quiz_settings;
 
 /**
  * Update the filter condition for a random question.
@@ -58,35 +60,19 @@ class update_filter_condition extends external_api {
      * @param string $filtercondition
      * @return array  result
      */
-    public static function execute(
-        int $cmid,
-        int $slotid,
-        string $filtercondition,
-    ): array {
-        global  $DB;
+    public static function execute(int $cmid, int $slotid, string $filtercondition): array {
+        ['cmid' => $cmid, 'slotid' => $slotid, 'filtercondition' => $filtercondition] = self::validate_parameters(
+            self::execute_parameters(),
+            ['cmid' => $cmid, 'slotid' => $slotid, 'filtercondition' => $filtercondition]
+        );
 
-        [
-            'cmid' => $cmid,
-            'slotid' => $slotid,
-            'filtercondition' => $filtercondition,
-        ] = self::validate_parameters(self::execute_parameters(), [
-            'cmid' => $cmid,
-            'slotid' => $slotid,
-            'filtercondition' => $filtercondition,
-        ]);
+        $context = module::instance($cmid);
+        self::validate_context($context);
+        require_capability('mod/quiz:manage', $context);
 
-        // Validate context.
-        $thiscontext = \context_module::instance($cmid);
-        self::validate_context($thiscontext);
-        require_capability('mod/quiz:manage', $thiscontext);
-
-        // Update filter condition.
-        $setparams = [
-            'itemid' => $slotid,
-            'questionarea' => 'slot',
-            'component' => 'mod_quiz',
-        ];
-        $DB->set_field('question_set_references', 'filtercondition', $filtercondition, $setparams);
+        $filtercondition = json_decode($filtercondition, true);
+        $structure = quiz_settings::create_for_cmid($cmid)->get_structure();
+        $structure->update_random_question($slotid, $filtercondition);
 
         return ['message' => get_string('updatefilterconditon_success', 'mod_quiz')];
     }

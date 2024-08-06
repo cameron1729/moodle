@@ -1846,8 +1846,6 @@ function quiz_add_quiz_question($questionid, $quiz, $page = 0, $maxmark = null) 
         $DB->insert_record('question_references', $questionreferences);
     }
 
-    $trans->allow_commit();
-
     // Log slot created event.
     $cm = get_coursemodule_from_instance('quiz', $quiz->id);
     $event = \mod_quiz\event\slot_created::create([
@@ -1856,10 +1854,14 @@ function quiz_add_quiz_question($questionid, $quiz, $page = 0, $maxmark = null) 
         'other' => [
             'quizid' => $quiz->id,
             'slotnumber' => $slot->slot,
-            'page' => $slot->page
+            'page' => $slot->page,
+            'questionbankentryid' => $questionreferences->questionbankentryid,
+            'version' => $questionreferences->version,
         ]
     ]);
     $event->trigger();
+
+    $trans->allow_commit();
 }
 
 /**

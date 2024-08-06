@@ -16,7 +16,10 @@
 
 namespace mod_quiz\local\structure;
 
-use context_module;
+use core\context\module;
+use core\exception\coding_exception;
+use mod_quiz\event\slot_created;
+use mod_quiz\event\slot_filtercondition_updated;
 
 /**
  * Class slot_random, represents a random question slot type.
@@ -214,19 +217,50 @@ class slot_random {
         $this->referencerecord->filtercondition = $this->filtercondition;
         $DB->insert_record('question_set_references', $this->referencerecord);
 
-        $trans->allow_commit();
-
         // Log slot created event.
         $cm = get_coursemodule_from_instance('quiz', $quiz->id);
-        $event = \mod_quiz\event\slot_created::create([
-            'context' => context_module::instance($cm->id),
+        slot_created::create([
+            'context' => module::instance($cm->id),
             'objectid' => $this->record->id,
             'other' => [
                 'quizid' => $quiz->id,
                 'slotnumber' => $this->record->slot,
-                'page' => $this->record->page
+                'page' => $this->record->page,
+                'questionscontextid' => $this->referencerecord->questionscontextid,
+                'filtercondition' => $this->referencerecord->filtercondition,
+            ],
+        ])->trigger();
+
+        $trans->allow_commit();
+    }
+
+    /**
+     * Update the filter condition for an existing random slot.
+     *
+     * @param array $filtercondition
+     */
+    public function update_filtercondition(array $filtercondition): void {
+        global $DB;
+
+        if (!isset($this->record->id)) {
+            throw new coding_exception('Cannot update filtercondition without slot record ID.');
+        }
+
+        $cm = get_coursemodule_from_instance('quiz', $this->get_quiz()->id);
+        $transaction = $DB->start_delegated_transaction();
+        $params = ['component' => 'mod_quiz', 'questionarea' => 'slot', 'itemid' => $this->record->id];
+        $DB->set_field('question_set_references', 'filtercondition', json_encode($filtercondition), $params);
+        slot_filtercondition_updated::create([
+            'context' => module::instance($cm->id),
+            'objectid' => $this->record->id,
+            'other' => [
+                'quizid' => $this->get_quiz()->id,
+                'slotnumber' => $this->record->slot,
+                'page' => $this->record->page,
+                'questionscontextid' => $this->referencerecord->questionscontextid,
+                'filtercondition' => json_encode($filtercondition),
             ]
-        ]);
-        $event->trigger();
+        ])->trigger();
+        $transaction->allow_commit();
     }
 }
