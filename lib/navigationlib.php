@@ -167,6 +167,20 @@ class navigation_node implements renderable {
     /** @var bool node that have children. */
     public $haschildren;
 
+    private static ?string $debugdir = null;
+    private static ?array $placeholders = null;
+
+    public static function get_placeholders() {
+        $mkplaceholder = fn(string $key): navigation_node => new navigation_node(['key' => $key . '_placeholder', 'text' => '']);
+        $trees = ['settingsnav', 'navigation', 'secondarynav'];
+
+        if (!self::$placeholders) {
+            self::$placeholders = array_map($mkplaceholder, array_combine($trees, $trees));
+        }
+
+        return self::$placeholders;
+    }
+
     /**
      * Constructs a new navigation_node
      *
@@ -174,6 +188,11 @@ class navigation_node implements renderable {
      *                     as the text for the node
      */
     public function __construct($properties) {
+
+        if (count(self::$placeholders ?? []) === 3) {
+            $this->debug("Constructing node " . ($properties['key'] ?? 'nokey'));
+        }
+
         if (is_array($properties)) {
             // Check the array for each property that we allow to set at construction.
             // text         - The main content for the node
@@ -242,6 +261,7 @@ class navigation_node implements renderable {
      */
     public function check_if_active($strength=URL_MATCH_EXACT) {
         global $FULLME, $PAGE;
+
         // Set fullmeurl if it hasn't already been set
         if (self::$fullmeurl == null) {
             if ($PAGE->has_set_url()) {
@@ -397,6 +417,7 @@ class navigation_node implements renderable {
      * @return navigation_node The added node
      */
     public function add_node(navigation_node $childnode, $beforekey=null) {
+        $this->debug("Adding $childnode to $this");
         // First convert the nodetype for this node to a branch as it will now have children
         if ($this->nodetype !== self::NODETYPE_BRANCH) {
             $this->nodetype = self::NODETYPE_BRANCH;
@@ -494,6 +515,7 @@ class navigation_node implements renderable {
      * @return bool
      */
     public function remove() {
+        $this->debug("Removing $this from " . $this->parent);
         return $this->parent->children->remove($this->key, $this->type);
     }
 
@@ -515,6 +537,7 @@ class navigation_node implements renderable {
      * rather than having to locate and manually mark a node active.
      */
     public function make_active() {
+        $this->debug("Marking $this as active");
         $this->isactive = true;
         $this->add_class('active_tree_node');
         $this->force_open();
@@ -528,6 +551,7 @@ class navigation_node implements renderable {
      * doing the same to all parents.
      */
     public function make_inactive() {
+        $this->debug("Marking $this as inactive");
         $this->isactive = false;
         $this->remove_class('active_tree_node');
         if ($this->parent !== null) {
@@ -590,6 +614,80 @@ class navigation_node implements renderable {
             }
         }
         return false;
+    }
+
+    public function __toString(): string {
+        return ($this->key ?? '?' . get_class($this)) . ($this->isactive ? '*' : '') . " (" .
+                                  "id: " . spl_object_id($this) .
+                                  " type: " . $this->type .
+                                  " parent: " . ($this->parent ? spl_object_id($this->parent) : "none") .
+                                  " ncid: " . (is_object($this->children) ? spl_object_id($this->children) : '?') .
+        ")";
+    }
+
+    public function print_tree(string $pre = ''): string {
+        $node ??= $this;
+        $children = iterator_to_array($node->children);
+        $islast = fn(self $node): bool => $children[array_key_last($children)]->key === $node->key;
+        $nodeline = fn(self $node): string => $pre . ($islast($node) ? '└' : '├') . $node;
+        $childline = fn(self $node): string => $node->has_children() ? $node->print_tree($pre . ($islast($node) ? ' ' : '│')) : '';
+        $merge = fn(string $nodes, self $node): string => $nodes . $nodeline($node) . "\n" . $childline($node);
+        return array_reduce($children, $merge, empty($pre) ? ($node  . "\n") : '');
+    }
+
+    private static function get_debug_frame_base() {
+        $base = '/home/cameronball/treestuff';
+        if (!self::$debugdir) {
+            // make a temp dir (just hardcode something for now and make it good later)
+            self::$debugdir = (new DateTime)->format(DateTime::ATOM);
+            mkdir($base . '/' . self::$debugdir, 0777);
+        }
+
+        $count = count(glob($base . '/' . self::$debugdir . "/*.trees.txt"));
+        return $base . '/' . self::$debugdir . "/" .  ($count + 1);
+    }
+
+    public static function debug(string $message): void {
+        global $CFG;
+
+        if(!optional_param('debugnav', false, PARAM_BOOL)) {
+            return;
+        }
+
+        global $PAGE;
+        $base = self::get_debug_frame_base();
+        $fields = ['function', 'line', 'file', 'class'];
+        $getfields = fn(array $frame): array => array_intersect_key($frame, array_flip($fields));
+        $rawbacktrace = array_map($getfields, debug_backtrace());
+        ['function' => $function, 'file' => $file, 'class' => $class] = $rawbacktrace[1];
+
+        $pad = fn(int $width): callable => fn(?string $str): string => $str . str_pad(" ", $width - ($str ? mb_strlen($str) : 0));
+        $distribute = fn(?string ...$strings): string => implode("", array_map($pad(70), $strings));
+        [$lines, $unlines] = [partial(implode(...), "\n"), partial(explode(...), "\n")];
+        $align = fn(string ...$texts): string => $lines(array_map($distribute, ...array_map($unlines, $texts)));
+        $placeholders = self::get_placeholders();
+
+        $get = Closure::bind(fn(string $nav): navigation_node => $PAGE->{'_' . $nav} ?? $placeholders[$nav], null, $PAGE);
+        $trees = [$get('settingsnav'), $get('navigation'), $get('secondarynav')];
+        $logmsg = "Page info>\n";
+        $logmsg .= "  fullmeurl: " . (self::$fullmeurl ? self::$fullmeurl->out() : "Not set") . "\n";
+        $logmsg .= "  primary active tab: " . ($PAGE->get_primary_activate_tab() ?? "Not set") . "\n";
+        $logmsg .= "  secondary active tab: " . ($PAGE->get_secondary_active_tab() ?? "Not set") . "\n";
+        $logmsg .= $class . "::" . $function . "> " . $message . "\n\n";
+        $logmsg .= $align(...array_map(fn(navigation_node $node): string => $node->print_tree(), $trees));
+        file_put_contents($base . '.trees.txt', $logmsg);
+
+        $colour = fn(string $colour, string $str): string => "\033[${colour}m$str\033[0m";
+        $function = fn(array $frame): string => (isset($frame['class']) ? $colour("1;36", $frame['class']) . "::" : '') . $colour("1;32", $frame['function']);
+        $file = fn(array $frame): string => str_replace($CFG->dirroot . "/", "", $colour("1;33", $frame['file'] ?? '?')) . ":" . $colour("1;31", "line " . ($frame['line'] ?? '?'));
+
+        $backtrace = ['Debug call> ' . $message . "\n", ...array_map(
+            fn(int $frame): string => '  called from ' .
+                (isset($rawbacktrace[$frame]) ? $function($rawbacktrace[$frame]) . " in " : "") .
+                $file($rawbacktrace[$frame - 1]),
+            range(1, count($rawbacktrace))
+        )];
+        file_put_contents($base . '.trace.txt', implode("\n", $backtrace), true);
     }
 
     /**
@@ -864,6 +962,7 @@ class navigation_node implements renderable {
      * @param navigation_node $parent
      */
     public function set_parent(navigation_node $parent) {
+        $this->debug("Setting $this's parent to $parent");
         // Set the parent (thats the easy part)
         $this->parent = $parent;
         // Check if this node is active (this is checked during construction)
@@ -871,6 +970,7 @@ class navigation_node implements renderable {
             // Force all of the parent nodes open so you can see this node
             $this->parent->force_open();
             // Make all parents inactive so that its clear where we are.
+            $this->debug("Setting $parent inactive");
             $this->parent->make_inactive();
         }
     }

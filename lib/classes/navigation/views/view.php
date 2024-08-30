@@ -118,22 +118,32 @@ abstract class view extends navigation_node {
 
         $result = null;
         $activekey = $this->page->get_secondary_active_tab();
+
         if ($activekey) {
             if ($node->key && $activekey === $node->key) {
+                $this->debug("$node matches forced active key $activekey, returning it.");
                 return $node;
             }
         } else if ($node->check_if_active($strictness)) {
+            $this->debug("$node is active, returning it.");
             return $node; // No need to continue, exit function.
         }
 
+        $this->debug("Inspect children of $node");
         foreach ($node->children as $child) {
+            $this->debug("Inspecting child $child for active nodes");
             if ($this->active_node_scan($child, $strictness)) {
+                $this->debug("$child should be made active");
                 // If node is one of the new views then set the active node to the child.
                 if (!$node instanceof view) {
+                    $this->debug("$node is NOT a view, marking $node active");
                     $node->make_active();
                     $result = $node;
                 } else {
+                    $this->debug("$node IS a view, marking $child active");
                     $child->make_active();
+
+                    // Does this even do anything???
                     $this->activenode = $child;
                     $result = $child;
                 }
@@ -144,9 +154,11 @@ abstract class view extends navigation_node {
                 }
             } else {
                 // Make sure to reset the active state.
+                $this->debug("$child should not be active. Marking inactive");
                 $child->make_inactive();
             }
         }
+        $this->debug("Finish inspect children of $node");
 
         return $result;
     }

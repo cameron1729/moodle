@@ -200,6 +200,8 @@ class secondary extends view {
     public function initialise(): void {
         global $SITE;
 
+        $this->debug("Initialising view");
+
         if (during_initial_install() || $this->initialised) {
             return;
         }
@@ -254,8 +256,11 @@ class secondary extends view {
         }
         // Force certain navigation nodes to be displayed in the "more" menu.
         $this->force_nodes_into_more_menu($defaultmoremenunodes, $maxdisplayednodes);
+
         // Search and set the active node.
+        $this->debug("Initiate node scan");
         $this->scan_for_active_node($this);
+        $this->debug("Node scan complete. Secondary initialisation finished.");
         $this->initialised = true;
     }
 
