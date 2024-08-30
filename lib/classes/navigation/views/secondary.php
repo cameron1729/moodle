@@ -1083,19 +1083,25 @@ class secondary extends view {
 
         // Create 'Course' navigation node.
         $coursesecondarynode = navigation_node::create(get_string('course'), null, self::TYPE_COURSE, null, 'course');
+
+        // Add the node ASAP so that we can see its state during navigation debugging.
+        // If it needs to be removed then we will remove it later. See the if block
+        // just below.
+        $this->add_node($coursesecondarynode);
         $this->load_course_navigation($coursesecondarynode);
+
+        // This is required to force the template to output these items within a dropdown menu.
+        $coursesecondarynode->showchildreninsubmenu = true;
+
+        if (count($coursesecondarynode->children) === 0) {
+            $coursesecondarynode->showchildreninsubmenu = false;
+            $coursesecondarynode->remove();
+        }
+
         // Remove the unnecessary 'Course' child node generated in load_course_navigation().
         $coursehomenode = $coursesecondarynode->find('coursehome', self::TYPE_COURSE);
         if (!empty($coursehomenode)) {
             $coursehomenode->remove();
-        }
-
-        // Add the 'Course' node to the secondary navigation only if this node has children nodes.
-        if (count($coursesecondarynode->children) > 0) {
-            $this->add_node($coursesecondarynode);
-            // Once all the items have been added to the 'Course' secondary navigation node, set the 'showchildreninsubmenu'
-            // property to true. This is required to force the template to output these items within a dropdown menu.
-            $coursesecondarynode->showchildreninsubmenu = true;
         }
 
         // Create 'Activity' navigation node.
@@ -1120,6 +1126,8 @@ class secondary extends view {
             $page->set_url(new \moodle_url('/mod/' . $page->activityname . '/view.php', ['id' => $page->cm->id]));
         }
 
+        // As before, add ASAP to be able to inspect during debugging.
+        $this->add_node($activitysecondarynode);
         $this->load_module_navigation($page->settingsnav, $activitysecondarynode);
 
         // Add the 'Activity' node to the secondary navigation only if this node has more that one child node.
@@ -1127,7 +1135,6 @@ class secondary extends view {
             // Set the 'showchildreninsubmenu' property to true to later output the the module navigation items within
             // a dropdown menu.
             $activitysecondarynode->showchildreninsubmenu = true;
-            $this->add_node($activitysecondarynode);
             if ($this->context instanceof \context_module) {
                 $this->page->set_secondary_active_tab($activitysecondarynode->key);
             }
