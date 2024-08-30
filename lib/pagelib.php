@@ -2435,6 +2435,7 @@ class moodle_page {
      * @param string $navkey the key of the secondary nav node to be activated.
      */
     public function set_secondary_active_tab(string $navkey): void {
+        navigation_node::debug('Setting secondary active tab to ' . $navkey);
         $this->_activekeysecondary = $navkey;
     }
 
@@ -2453,6 +2454,7 @@ class moodle_page {
      * @param string $navkey
      */
     public function set_primary_active_tab(string $navkey): void {
+        navigation_node::debug('Setting primary active tab to ' . $navkey);
         $this->_activenodeprimary = $navkey;
     }
 

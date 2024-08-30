@@ -588,6 +588,8 @@ $string['enablecalendarexport'] = 'Enable calendar export';
 $string['enablecomments'] = 'Enable comments';
 $string['enablecommunicationsubsystem'] = 'Enable communication providers';
 $string['enablecommunicationsubsystem_desc'] = 'Allow integration with communication providers such as Matrix so teachers and students can communicate more easily. You can manage these integrations in <a href="settings.php?section=managecommunicationproviders">Plugins</a>.';
+$string['enablenavigationnodedebugging'] = 'Enable navigation node debugging';
+$string['enablenavigationnodedebugging_desc'] = 'When enabled, you can append debugnav=1 as a query parameter to any page and the state of various navigation trees at diffrent points in their lifecycle will be dumped in a folder with the current timestamp as its name, located in $CFG->tempdir/navdebug. To view these files in a meaningful way, you may want to consider downloading the play_tree_frames script available from <a href="https://github.com/cameron1729/navigation-node-player">this Git repository</a>.';
 $string['enablecourserelativedates'] = 'Enable course relative dates';
 $string['enablecourserelativedates_desc'] = 'Allow courses to be set up to display dates relative to the user\'s start date in the course.';
 $string['enablecourserequests'] = 'Enable course requests';

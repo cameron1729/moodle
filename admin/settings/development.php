@@ -43,6 +43,11 @@ if ($hassiteconfig) { // speedup for non-admins, add all caps used on this page
         new lang_string('enablecommunicationsubsystem', 'core_admin'),
         new lang_string('enablecommunicationsubsystem_desc', 'core_admin'), 0));
 
+    // Navigation node debugging.
+    $temp->add(new admin_setting_configcheckbox('enablenavigationnodedebugging',
+        new lang_string('enablenavigationnodedebugging', 'core_admin'),
+        new lang_string('enablenavigationnodedebugging_desc', 'core_admin'), 0));
+
     $ADMIN->add('experimental', $temp);
 
     // "debugging" settingpage
