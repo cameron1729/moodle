@@ -62,7 +62,8 @@ class completion_action_bar implements templatable, renderable {
             'coursecompletionnavigation',
             manager::get_available_completion_options($this->courseid),
             $this->currenturl->out(false),
-            true
+            true,
+            select_menu::ACTION_TYPE_EVENT
         );
         $selectmenu->set_label(
             get_string('coursecompletionnavigation', 'completion'),

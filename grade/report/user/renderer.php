@@ -190,7 +190,8 @@ class gradereport_user_renderer extends plugin_renderer_base {
 
         $selectoractiveurl = $userview === GRADE_REPORT_USER_VIEW_USER ? $viewasotheruser : $viewasmyself;
 
-        $viewasselect = new \core\output\select_menu('viewas', $selectoroptions, $selectoractiveurl->out(false), true);
+        $viewasselect = new \core\output\select_menu('viewas', $selectoroptions, $selectoractiveurl->out(false), true,
+            \core\output\select_menu::ACTION_TYPE_EVENT);
         $viewasselect->set_label(get_string('viewas', 'core_grades'));
 
         return $this->render_from_template('gradereport_user/view_mode_selector',
