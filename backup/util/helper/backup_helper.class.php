@@ -421,7 +421,8 @@ abstract class backup_helper {
 
             }
 
-            $selectmenu = new \core\output\select_menu('coursereusetype', $menuarray, $activeurl, true);
+            $selectmenu = new \core\output\select_menu('coursereusetype', $menuarray, $activeurl, true,
+                \core\output\select_menu::ACTION_TYPE_EVENT);
             $selectmenu->set_label(get_string('coursereusenavigationmenu'), ['class' => 'sr-only']);
             $options = \html_writer::tag(
                 'div',

@@ -206,7 +206,8 @@ class participants_action_bar implements renderable {
             $activeurl = $this->find_active_page($urlselectcontent);
             $activeurl = $activeurl ?: $this->find_active_page($urlselectcontent, URL_MATCH_BASE);
 
-            $selectmenu = new select_menu('participantsnavigation', $urlselectcontent, $activeurl, true);
+            $selectmenu = new select_menu('participantsnavigation', $urlselectcontent, $activeurl, true,
+                select_menu::ACTION_TYPE_EVENT);
             $selectmenu->set_label(get_string('participantsnavigation', 'course'), ['class' => 'sr-only']);
 
             return $selectmenu->export_for_template($output);

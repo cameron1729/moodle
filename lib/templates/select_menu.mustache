@@ -25,6 +25,7 @@
     * baseid - id of the dropdown element and to be used to generate id for other elements used internally
     * label - Element label
     * labelattributes - Label attributes.
+    * actiontype - The action type triggered when a selection is made.
     * selectedoption - Text of the selected option
     * options - Array of options for the select with value, name, selected, isgroup and id properites.
     * disableactive - A flag indicating whether the active state should be disabled in the dropdown.
@@ -41,6 +42,7 @@
                 "value": "font-weight-bold"
             }
         ],
+        "actiontype": "hiddenInput",
         "selectedoption": "Second option",
         "options": [
             {
@@ -99,6 +101,7 @@
         aria-expanded="false"
         aria-controls="{{baseid}}-listbox"
         data-input-element="{{baseid}}-input"
+        data-actiontype="{{actiontype}}"
         tabindex="0"
     >
         {{#inlinelabel}}
@@ -150,7 +153,9 @@
             {{/isgroup}}
         {{/options}}
     </ul>
-    <input type="hidden" name="{{name}}" value="{{value}}" id="{{baseid}}-input">
+    {{#usehiddeninput}}
+        <input type="hidden" name="{{name}}" value="{{value}}" id="{{baseid}}-input">
+    {{/usehiddeninput}}
 </div>
 {{#js}}
     var label = document.getElementById('{{baseid}}-label');

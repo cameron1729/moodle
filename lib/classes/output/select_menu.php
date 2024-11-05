@@ -27,6 +27,12 @@ namespace core\output;
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class select_menu implements renderable, templatable {
+    /**
+     * Specifies the type of action triggered when an option is selected in the select menu.
+     */
+    public const ACTION_TYPE_HIDDEN_INPUT = 'hiddenInput';
+    public const ACTION_TYPE_EVENT = 'event';
+
     /** @var array List of options. */
     protected $options;
 
@@ -48,6 +54,9 @@ class select_menu implements renderable, templatable {
     /** @var bool A flag indicating whether the active state should be disabled in the dropdown. */
     protected $disableactive;
 
+    /** @var string The action type triggered when a selection is made. */
+    protected $actiontype;
+
     /**
      * select_menu constructor.
      *
@@ -62,12 +71,20 @@ class select_menu implements renderable, templatable {
      *                            as the user is redirected. However, in cases where no redirection occurs and
      *                            it is valid to display the active state, this flag should remain false,
      *                            allowing the checkmark to appear beside the active item.
+     * @param string $actiontype Specifies the type of action triggered when an option is selected.
+     *                           Supported values:
+     *                           - ACTION_TYPE_HIDDEN_INPUT: Triggers a change event on a hidden input element, primarily
+     *                           for backward compatibility with legacy handling mechanisms.
+     *                           - ACTION_TYPE_EVENT: Dispatches a custom "change" event with the selected option's value
+     *                           passed as event data.
      */
-    public function __construct(string $name, array $options, ?string $selected = null, bool $disableactive = false) {
+    public function __construct(string $name, array $options, ?string $selected = null, bool $disableactive = false,
+            string $actiontype = self::ACTION_TYPE_HIDDEN_INPUT) {
         $this->name = $name;
         $this->options = $options;
         $this->selected = $selected;
         $this->disableactive = $disableactive;
+        $this->actiontype = $actiontype;
     }
 
     /**
@@ -185,6 +202,8 @@ class select_menu implements renderable, templatable {
         $data->name = $this->name;
         $data->value = $this->selected;
         $data->disableactive = $this->disableactive;
+        $data->actiontype = $this->actiontype;
+        $data->usehiddeninput = ($this->actiontype === self::ACTION_TYPE_HIDDEN_INPUT);
 
         // Label attributes.
         $data->labelattributes = [];

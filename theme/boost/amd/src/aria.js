@@ -369,27 +369,23 @@ const comboboxFix = () => {
     });
 
     const selectOption = (combobox, option) => {
-        if (combobox.dataset.inputElement) {
-            const inputElement = document.getElementById(combobox.dataset.inputElement);
-            if (inputElement && (inputElement.value != option.dataset.value)) {
-                inputElement.value = option.dataset.value;
-                inputElement.dispatchEvent(new Event('change', {bubbles: true}));
-            }
+        const listbox = option.closest('[role="listbox"]');
+        const oldSelectedOption = listbox.querySelector('[role="option"][aria-selected="true"]');
+
+        if (option === oldSelectedOption) {
+            return;
         }
+
+        processSelectedOption(combobox, option.dataset.value);
 
         if (option.dataset.disableactive) {
             return;
         }
 
-        const listbox = option.closest('[role="listbox"]');
-        const oldSelectedOption = listbox.querySelector('[role="option"][aria-selected="true"]');
-
-        if (oldSelectedOption != option) {
-            if (oldSelectedOption) {
-                oldSelectedOption.removeAttribute('aria-selected');
-            }
-            option.setAttribute('aria-selected', 'true');
+        if (oldSelectedOption) {
+            oldSelectedOption.removeAttribute('aria-selected');
         }
+        option.setAttribute('aria-selected', 'true');
 
         if (combobox.hasAttribute('value')) {
             combobox.value = option.dataset.shortText || option.textContent.replace(/[\n\r]+|[\s]{2,}/g, ' ').trim();
@@ -401,6 +397,23 @@ const comboboxFix = () => {
                 combobox.textContent = option.dataset.shortText || option.textContent;
             }
         }
+    };
+
+    const processSelectedOption = (combobox, optionvalue) => {
+        const useInput = combobox.dataset.actiontype === 'hiddenInput';
+        const event = useInput ? new Event('change', {bubbles: true}) : new CustomEvent('change', {
+            bubbles: true, detail: { value: optionvalue }});
+        const element = useInput ? document.getElementById(combobox.dataset.inputElement) : combobox;
+
+        if (!element) {
+            return;
+        }
+
+        if (useInput) {
+            element.value = optionvalue;
+        }
+
+        element.dispatchEvent(event);
     };
 };
 
