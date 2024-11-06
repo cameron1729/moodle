@@ -28,7 +28,7 @@ namespace core\output;
  */
 class select_menu implements renderable, templatable {
     /**
-     * Specifies the type of action triggered when an option is selected in the select menu.
+     * Specifies the type of action triggered when an option is selected in the combo box.
      */
     public const ACTION_TYPE_HIDDEN_INPUT = 'hiddenInput';
     public const ACTION_TYPE_EVENT = 'event';
