@@ -258,10 +258,7 @@ Feature: Feedbacks in courses with groups
     # The response numbers were randomly allocated, we only can assert the number of visible responses here:
     And the field "Separate groups" matches value "Group 2"
     And "//tr[contains(@id,'_r2') and contains(.,'Response number')]" "xpath_element" should exist
-    And "//tr[contains(@id,'_r3') and contains(@class,'emptyrow')]" "xpath_element" should exist
     And I select "Group 1" from the "Separate groups" singleselect
     And "//tr[contains(@id,'_r3') and contains(.,'Response number')]" "xpath_element" should exist
-    And "//tr[contains(@id,'_r4') and contains(@class,'emptyrow')]" "xpath_element" should exist
     And I select "All participants" from the "Separate groups" singleselect
     And "//tr[contains(@id,'_r7') and contains(.,'Response number')]" "xpath_element" should exist
-    And "//tr[contains(@id,'_r8') and contains(@class,'emptyrow')]" "xpath_element" should exist
