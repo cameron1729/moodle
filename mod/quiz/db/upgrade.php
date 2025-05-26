@@ -138,5 +138,39 @@ function xmldb_quiz_upgrade($oldversion) {
     // Automatically generated Moodle v4.5.0 release upgrade line.
     // Put any upgrade step following this.
 
+    if ($oldversion < 2025041401) {
+
+        // Changing precision of field name on table quiz to (1333).
+        $table = new xmldb_table('quiz');
+        $field = new xmldb_field('name', XMLDB_TYPE_CHAR, '1333', null, XMLDB_NOTNULL, null, null, 'course');
+
+        // Launch change of precision for field name.
+        $dbman->change_field_precision($table, $field);
+
+        // Quiz savepoint reached.
+        upgrade_mod_savepoint(true, 2025041401, 'quiz');
+    }
+
+    if ($oldversion < 2024100701) {
+        $reportsizes = range(
+            mod_quiz\local\reports\attempts_report::MIN_PAGE_SIZE,
+            mod_quiz\local\reports\attempts_report::MAX_PAGE_SIZE,
+            mod_quiz\local\reports\attempts_report::PAGE_SIZE_STEP
+        );
+        $prefs = $DB->get_records('user_preferences', ['name' => 'quiz_report_pagesize']);
+
+        foreach ($prefs as $pref) {
+            $current = (int)$pref->value;
+            $snapped = min(array_filter($reportsizes, fn(int $val): bool => $val >= $current) ?: [100]);
+
+            if ($snapped !== $current) {
+                $pref->value = $snapped;
+                $DB->update_record('user_preferences', $pref);
+            }
+        }
+
+        upgrade_mod_savepoint(true, 2024100701, 'quiz');
+    }
+
     return true;
 }
