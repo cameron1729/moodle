@@ -117,10 +117,19 @@ abstract class attempts_report_options_form extends \moodleform {
     /**
      * Add the standard options fields to the form.
      *
+     * Page size for reports should be in the range 1-100 and from
+     * the UI a selector is offered with values in steps of 10. I.e.,
+     * 10, 20, 30 ... 100.
+     *
      * @param MoodleQuickForm $mform the form we are building.
      */
     protected function standard_preference_fields(MoodleQuickForm $mform) {
-        $mform->addElement('text', 'pagesize', get_string('pagesize', 'quiz'));
+        $options = array_combine(
+            range(attempts_report::MIN_PAGE_SIZE, attempts_report::MAX_PAGE_SIZE, attempts_report::PAGE_SIZE_STEP),
+            range(attempts_report::MIN_PAGE_SIZE, attempts_report::MAX_PAGE_SIZE, attempts_report::PAGE_SIZE_STEP)
+        );
+
+        $mform->addElement('select', 'pagesize', get_string('pagesize', 'quiz'), $options);
         $mform->setType('pagesize', PARAM_INT);
     }
 
@@ -147,6 +156,10 @@ abstract class attempts_report_options_form extends \moodleform {
             )
         ) {
             $errors['stateoptions'] = get_string('reportmustselectstate', 'quiz');
+        }
+
+        if (!isset($data['pagesize']) || $data['pagesize'] > attempts_report::MAX_PAGE_SIZE || $data['pagesize'] < 1) {
+            $errors['pagesize'] = get_string('reportpagesize', 'quiz');
         }
 
         return $errors;

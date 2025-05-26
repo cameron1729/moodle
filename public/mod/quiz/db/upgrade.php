@@ -149,5 +149,26 @@ function xmldb_quiz_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2025041401, 'quiz');
     }
 
+    if ($oldversion < 2025053000) {
+        $reportsizes = range(
+            mod_quiz\local\reports\attempts_report::MIN_PAGE_SIZE,
+            mod_quiz\local\reports\attempts_report::MAX_PAGE_SIZE,
+            mod_quiz\local\reports\attempts_report::PAGE_SIZE_STEP
+        );
+        $prefs = $DB->get_records('user_preferences', ['name' => 'quiz_report_pagesize']);
+
+        foreach ($prefs as $pref) {
+            $current = (int)$pref->value;
+            $snapped = min(array_filter($reportsizes, fn(int $val): bool => $val >= $current) ?: [100]);
+
+            if ($snapped !== $current) {
+                $pref->value = $snapped;
+                $DB->update_record('user_preferences', $pref);
+            }
+        }
+
+        upgrade_mod_savepoint(true, 2025053000, 'quiz');
+    }
+
     return true;
 }
