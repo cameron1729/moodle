@@ -947,6 +947,7 @@ $string['reportmulti_resp'] = 'Individual responses';
 $string['reportmustselectstate'] = 'You must select at least one state.';
 $string['reportnotfound'] = 'Report not known ({$a})';
 $string['reportoverview'] = 'Overview';
+$string['reportpagesizeerror'] = 'Report page size must be between {$a->pagemin} and {$a->pagemax}';
 $string['reportregrade'] = 'Regrade attempts';
 $string['reportresponses'] = 'Detailed responses';
 $string['reports'] = 'Reports';
