@@ -158,8 +158,9 @@ abstract class attempts_report_options_form extends \moodleform {
             $errors['stateoptions'] = get_string('reportmustselectstate', 'quiz');
         }
 
-        if (!isset($data['pagesize']) || $data['pagesize'] > attempts_report::MAX_PAGE_SIZE || $data['pagesize'] < 1) {
-            $errors['pagesize'] = get_string('reportpagesize', 'quiz');
+        $pagerange = ['pagemin' => attempts_report::MIN_PAGE_SIZE, 'pagemax' => attempts_report::MAX_PAGE_SIZE];
+        if (!isset($data['pagesize']) || $data['pagesize'] > $pagerange['pagemax'] || $data['pagesize'] < $pagerange['pagemin']) {
+            $errors['pagesize'] = get_string('reportpagesizeerror', 'quiz', $pagerange);
         }
 
         return $errors;

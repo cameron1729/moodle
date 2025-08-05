@@ -17,8 +17,8 @@
 namespace mod_quiz;
 
 use advanced_testcase;
+use mod_quiz\local\reports\attempts_report;
 use mod_quiz\local\reports\attempts_report_options_form;
-use MoodleQuickForm;
 
 /**
  * Unit tests for attempts_report_options_form.
@@ -55,12 +55,12 @@ final class attempts_report_options_form_test extends advanced_testcase {
      * @return array Array of testcases.
      */
     public static function validation_provider(): array {
-        $otherattemptsvalue = \mod_quiz\local\reports\attempts_report::ENROLLED_WITH;   // Any value ≠ ENROLLED_WITHOUT.
+        $pagerange = ['pagemin' => attempts_report::MIN_PAGE_SIZE, 'pagemax' => attempts_report::MAX_PAGE_SIZE];
 
         return [
             'No state selected' => [
                 [
-                    'attempts'        => $otherattemptsvalue,
+                    'attempts'        => attempts_report::ENROLLED_WITH,
                     'stateinprogress' => 0,
                     'stateoverdue'    => 0,
                     'statefinished'   => 0,
@@ -86,7 +86,7 @@ final class attempts_report_options_form_test extends advanced_testcase {
             ],
             'One state selected' => [
                 [
-                    'attempts' => $otherattemptsvalue,
+                    'attempts' => attempts_report::ENROLLED_WITH,
                     'stateinprogress' => 1,
                     'stateoverdue' => 0,
                     'statefinished' => 0,
@@ -99,20 +99,20 @@ final class attempts_report_options_form_test extends advanced_testcase {
             ],
             'Page size too large' => [
                 [
-                    'attempts' => $otherattemptsvalue,
+                    'attempts' => attempts_report::ENROLLED_WITH,
                     'stateinprogress' => 1,
                     'stateoverdue' => 0,
                     'statefinished' => 0,
                     'stateabandoned' => 0,
                     'statenotstarted' => 0,
                     'statesubmitted' => 0,
-                    'pagesize' => 200,
+                    'pagesize' => 2001,
                 ],
-                [get_string('reportpagesize', 'quiz')],
+                [get_string('reportpagesizeerror', 'quiz', $pagerange)],
             ],
             'Page size too small' => [
                 [
-                    'attempts' => $otherattemptsvalue,
+                    'attempts' => attempts_report::ENROLLED_WITH,
                     'stateinprogress' => 1,
                     'stateoverdue' => 0,
                     'statefinished' => 0,
@@ -121,11 +121,11 @@ final class attempts_report_options_form_test extends advanced_testcase {
                     'statesubmitted' => 0,
                     'pagesize' => -30,
                 ],
-                [get_string('reportpagesize', 'quiz')],
+                [get_string('reportpagesizeerror', 'quiz', $pagerange)],
             ],
             'Page size not specified' => [
                 [
-                    'attempts' => $otherattemptsvalue,
+                    'attempts' => attempts_report::ENROLLED_WITH,
                     'stateinprogress' => 1,
                     'stateoverdue' => 0,
                     'statefinished' => 0,
@@ -133,7 +133,7 @@ final class attempts_report_options_form_test extends advanced_testcase {
                     'statenotstarted' => 0,
                     'statesubmitted' => 0,
                 ],
-                [get_string('reportpagesize', 'quiz')],
+                [get_string('reportpagesizeerror', 'quiz', $pagerange)],
             ],
         ];
     }

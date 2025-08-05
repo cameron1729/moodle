@@ -40,7 +40,7 @@ abstract class attempts_report extends report_base {
     /** @var int Minimum number of rows that can be shown per page. */
     public const MIN_PAGE_SIZE = 10;
     /** @var int Maximum number of rows that can be shown per page. */
-    public const MAX_PAGE_SIZE = 100;
+    public const MAX_PAGE_SIZE = 2000;
     /** @var int Increment applied when offering page-size options. */
     public const PAGE_SIZE_STEP = 10;
     /** @var int default page size for reports. */
