@@ -762,15 +762,17 @@ final class adhoc_task_test extends \advanced_testcase {
         // Schedule adhoc task.
         $task = new adhoc_test_task();
         $task->set_custom_data(['courseid' => 10]);
-        $this->assertNotEmpty(manager::queue_adhoc_task($task, true));
+        $taskid1 = manager::queue_adhoc_task($task, true);
+        $this->assertNotEmpty($taskid1);
         $this->assertEquals(1, count(manager::get_adhoc_tasks('core\task\adhoc_test_task')));
         $taskrecord1 = manager::get_queued_adhoc_task_record($task);
         $this->assertObjectHasProperty('id', $taskrecord1);
+        $this->assertEquals($taskid1, $taskrecord1->id);
 
-        // Verify again that re-scheduling the same task does nothing.
+        // Verify again that re-scheduling the same task returns the existing task id.
         $task = new adhoc_test_task();
         $task->set_custom_data(['courseid' => 10]);
-        $this->assertFalse(manager::queue_adhoc_task($task, true));
+        $this->assertEquals($taskrecord1->id, manager::queue_adhoc_task($task, true));
         $this->assertEquals(1, count(manager::get_adhoc_tasks('core\task\adhoc_test_task')));
         $taskrecord2 = manager::get_queued_adhoc_task_record($task);
         $this->assertEquals($taskrecord1->id, $taskrecord2->id);
@@ -782,13 +784,13 @@ final class adhoc_task_test extends \advanced_testcase {
             'attemptsavailable' => 0,
         ]);
 
-        // Now, schedule the task again. Should create a new task.
+        // Now, schedule the task again. The existing task should be revived.
         $task = new adhoc_test_task();
         $task->set_custom_data(['courseid' => 10]);
-        $this->assertNotEmpty(manager::queue_adhoc_task($task, true));
-        $this->assertEquals(2, count(manager::get_adhoc_tasks('core\task\adhoc_test_task')));
+        $this->assertEquals($taskrecord1->id, manager::queue_adhoc_task($task, true));
+        $this->assertEquals(1, count(manager::get_adhoc_tasks('core\task\adhoc_test_task')));
         $taskrecord3 = manager::get_queued_adhoc_task_record($task);
-        $this->assertNotEquals($taskrecord1->id, $taskrecord3->id);
+        $this->assertEquals($taskrecord1->id, $taskrecord3->id);
         $this->assertEquals(0, $taskrecord3->faildelay);
         $this->assertEquals(12, $taskrecord3->attemptsavailable);
     }
@@ -1173,5 +1175,390 @@ final class adhoc_task_test extends \advanced_testcase {
             'zero'     => [0],
             'negative' => [-1],
         ];
+    }
+
+    /**
+     * Test logically identical tasks are not scheduled twice.
+     *
+     * @covers \core\task\manager::queue_adhoc_task
+     */
+    public function test_identical_tasks_are_deduplicated(): void {
+        $this->resetAfterTest();
+
+        $task1 = new \core\task\adhoc_test_task();
+        $task1->set_custom_data(['quizid' => 1]);
+
+        $task2 = new \core\task\adhoc_test_task();
+        $task2->set_custom_data(['quizid' => 1]);
+
+        \core\task\manager::queue_adhoc_task($task1, true);
+        \core\task\manager::queue_adhoc_task($task2, true);
+
+        $records = \core\task\manager::get_adhoc_tasks('\\core\\task\\adhoc_test_task');
+        $this->assertCount(1, $records);
+    }
+
+    /**
+     * Test task classes do not deduplicate.
+     *
+     * @covers \core\task\manager::queue_adhoc_task
+     */
+    public function test_different_task_classes_are_not_deduplicated(): void {
+        global $DB;
+        $this->resetAfterTest();
+
+        $task1 = new \core\task\adhoc_test_task();
+        $task1->set_custom_data(['quizid' => 5]);
+
+        $task2 = new \core\task\adhoc_test2_task();
+        $task2->set_custom_data(['quizid' => 5]);
+
+        \core\task\manager::queue_adhoc_task($task1, true);
+        \core\task\manager::queue_adhoc_task($task2, true);
+        $records = $DB->count_records('task_adhoc');
+        $this->assertEquals(2, $records);
+    }
+
+    /**
+     * Test that the generated key matches the expected SHA-1 payload
+     *
+     * @covers \core\task\manager::build_task_identity_hash
+     */
+    public function test_key_matches_expected_sha1_payload(): void {
+        $this->resetAfterTest();
+
+        $task = new \core\task\adhoc_test_task();
+        $task->set_component('core_testcomponent');
+        $task->set_custom_data(['alpha' => 1, 'beta' => 2]);
+        $task->set_userid(123);
+
+        $hash = manager::build_task_identity_hash($task);
+
+        $component = $task->get_component();
+        $classname = manager::get_canonical_class_name($task);
+        $userid = $task->get_userid();
+        $customdata = json_encode(['alpha' => 1, 'beta' => 2], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        $expectedpayload = implode('|', [$component, $classname, $userid, $customdata]);
+        $expectedhash = sha1($expectedpayload);
+
+        $this->assertSame($expectedhash, $hash);
+    }
+
+    /**
+     * Test that the task key changes when custom data is modified.
+     *
+     * @covers \core\task\manager::build_task_identity_hash
+     */
+    public function test_key_changes_when_customdata_changes(): void {
+        $this->resetAfterTest();
+
+        $task = new \core\task\adhoc_test_task();
+        $task->set_component('core_testcomponent');
+        $task->set_custom_data(['value' => 1]);
+        $key1 = manager::build_task_identity_hash($task);
+
+        $task->set_custom_data(['value' => 2]);
+        $key2 = manager::build_task_identity_hash($task);
+
+        $this->assertNotSame($key1, $key2);
+    }
+
+    /**
+     * Test build_task_identity_hash canonicalizes JSON key order.
+     *
+     * @covers \core\task\manager::build_task_identity_hash
+     */
+    public function test_build_task_identity_hash_json_key_order(): void {
+        $this->resetAfterTest();
+
+        $task1 = new \core\task\adhoc_test_task();
+        $task1->set_component('mod_quiz');
+        $task1->set_custom_data(['a' => 1, 'b' => 2]);
+
+        $task2 = new \core\task\adhoc_test_task();
+        $task2->set_component('mod_quiz');
+        $task2->set_custom_data(['b' => 2, 'a' => 1]);
+
+        $hash1 = manager::build_task_identity_hash($task1);
+        $hash2 = manager::build_task_identity_hash($task2);
+
+        $this->assertEquals($hash1, $hash2);
+    }
+
+    /**
+     * Test that the generated key matches the expected SHA-1 payload
+     *
+     * @covers \core\task\manager::build_task_identity_hash
+     */
+    public function test_same_task_different_userid_is_not_deduplicated(): void {
+        $this->resetAfterTest();
+
+        $user = \core_user::get_user_by_username('admin');
+
+        // Queue one task with userid.
+        $task1 = new \core\task\adhoc_test_task();
+        $task1->set_component('core_testcomponent');
+        $task1->set_custom_data(['alpha' => 1, 'beta' => 2]);
+        $task1->set_userid($user->id);
+
+        \core\task\manager::queue_adhoc_task($task1, true);
+
+        // Queue a second task without userid.
+        $task2 = new \core\task\adhoc_test_task();
+        $task2->set_component('core_testcomponent');
+        $task2->set_custom_data(['alpha' => 1, 'beta' => 2]);
+
+        \core\task\manager::queue_adhoc_task($task2, true);
+
+        // Check that two tasks have been queued as they are different based on the identity hash.
+        $this->assertEquals(2, count(manager::get_adhoc_tasks('core\task\adhoc_test_task')));
+    }
+
+    /**
+     * Test that an existing task without identityhash is updated when $checkforexisting is true
+     *
+     * @covers \core\task\manager::queue_adhoc_task
+     */
+    public function test_existing_task_without_identityhash_is_updated(): void {
+        $this->resetAfterTest();
+        global $DB;
+        // Queue one task without identityhash.
+        $task1 = new \core\task\adhoc_test_task();
+        $task1->set_component('core_testcomponent');
+        $task1->set_custom_data(['alpha' => 1, 'beta' => 2]);
+
+        // Queue task without identityhash.
+        $taskid = \core\task\manager::queue_adhoc_task($task1);
+        $queuedtask = $DB->get_record('task_adhoc', ['id' => $taskid]);
+        $this->assertNull($queuedtask->identityhash);
+
+        // Queue a second task without identityhash.
+        $task2 = new \core\task\adhoc_test_task();
+        $task2->set_component('core_testcomponent');
+        $task2->set_custom_data(['alpha' => 1, 'beta' => 2]);
+
+        // Queue task and check for existing ones. If found, it should update the task with identityhash.
+        \core\task\manager::queue_adhoc_task($task2, true);
+
+        // Verify only one task record exists (no duplicate was created).
+        $taskcount = $DB->count_records('task_adhoc', ['component' => 'core_testcomponent']);
+        $this->assertEquals(1, $taskcount);
+
+        // The queued task should now have an identityhash.
+        $updatedtask = $DB->get_record('task_adhoc', ['id' => $taskid]);
+        $this->assertNotEmpty($updatedtask->identityhash);
+    }
+
+    /**
+     * Test that existing duplicated tasks without identity hash are updated when a new task with the same
+     * parameters is queued.
+     *
+     * @covers \core\task\manager::queue_adhoc_task
+     */
+    public function test_existing_duplicated_tasks_without_identityhash_is_updated(): void {
+        $this->resetAfterTest();
+        global $DB;
+        // Queue one task without identityhash.
+        $task1 = new \core\task\adhoc_test_task();
+        $task1->set_component('core_testcomponent');
+        $task1->set_custom_data(['alpha' => 1, 'beta' => 2]);
+
+        // Queue multiple tasks without identityhash.
+        \core\task\manager::queue_adhoc_task($task1);
+        \core\task\manager::queue_adhoc_task($task1);
+        \core\task\manager::queue_adhoc_task($task1);
+        $taskcount = $DB->count_records('task_adhoc', ['component' => 'core_testcomponent']);
+        $this->assertEquals(3, $taskcount);
+
+        // Queue the same task this time checking if the task is already queued.
+        $task2 = new \core\task\adhoc_test_task();
+        $task2->set_component('core_testcomponent');
+        $task2->set_custom_data(['alpha' => 1, 'beta' => 2]);
+
+        // Queue task and check for existing ones. If found, it should update the task with identityhash.
+        $taskid = \core\task\manager::queue_adhoc_task($task2, true);
+
+        // Assert that debugging was called for removing duplicates.
+        $this->assertDebuggingCalled('Removed 2 duplicate tasks for \core\task\adhoc_test_task', DEBUG_DEVELOPER);
+
+        // Verify only one task record remains and all duplicates are removed.
+        $taskcount = $DB->count_records('task_adhoc', ['component' => 'core_testcomponent']);
+        $this->assertEquals(1, $taskcount);
+
+        // The queued task should now have an identityhash.
+        $updatedtask = $DB->get_record('task_adhoc', ['id' => $taskid]);
+        $this->assertNotEmpty($updatedtask->identityhash);
+    }
+
+    /**
+     * Test that existing duplicated tasks without identity hash are updated when a new task with the same
+     * parameters is queued.
+     *
+     * @covers \core\task\manager::queue_adhoc_task
+     */
+    public function test_existing_duplicated_tasks_in_execution_is_not_deleted(): void {
+        $this->resetAfterTest();
+        global $DB;
+        // Queue one task.
+        $task1 = new \core\task\adhoc_test_task();
+        $task1->set_component('core_testcomponent');
+        $task1->set_custom_data(['alpha' => 1, 'beta' => 2]);
+
+        // Queue one task that has started executing.
+        $task2 = new \core\task\adhoc_test_task();
+        $task2->set_component('core_testcomponent');
+        $task2->set_custom_data(['alpha' => 1, 'beta' => 2]);
+        $task2->set_timestarted(time());
+
+        // Queue multiple tasks for same component and get id for a task in execution.
+        \core\task\manager::queue_adhoc_task($task1);
+        \core\task\manager::queue_adhoc_task($task1);
+        \core\task\manager::queue_adhoc_task($task1);
+        $taskinexecution = \core\task\manager::queue_adhoc_task($task2);
+        $taskcount = $DB->count_records('task_adhoc', ['component' => 'core_testcomponent']);
+        $this->assertEquals(4, $taskcount);
+
+        // Queue the same task this time checking if the task is already queued.
+        $task3 = new \core\task\adhoc_test_task();
+        $task3->set_component('core_testcomponent');
+        $task3->set_custom_data(['alpha' => 1, 'beta' => 2]);
+
+        // Queue task and check for existing ones. If found, it should ignore the one that has started executing.
+        \core\task\manager::queue_adhoc_task($task3, true);
+
+        // Assert that debugging was called for removing 1 duplicate only.
+        $this->assertDebuggingCalled('Removed 2 duplicate tasks for \core\task\adhoc_test_task', DEBUG_DEVELOPER);
+
+        // Verify only two tasks for same component remains and the duplicates are removed.
+        $taskcount = $DB->count_records('task_adhoc', ['component' => 'core_testcomponent']);
+        $this->assertEquals(2, $taskcount);
+
+        // The task in execution should remain.
+        $updatedtask = $DB->get_record('task_adhoc', ['id' => $taskinexecution]);
+        $this->assertNotEmpty($updatedtask->timestarted);
+    }
+
+    /**
+     * Test that a running task remains deduplicated.
+     */
+    public function test_running_task_keeps_identityhash(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $clock = $this->mock_clock_with_frozen();
+        $now = $clock->time();
+
+        $task = new \core\task\adhoc_test_task();
+        $task->set_component('core_testcomponent');
+        $task->set_custom_data(['quizid' => 123]);
+        $taskid = \core\task\manager::queue_adhoc_task($task, true);
+
+        $record = $DB->get_record('task_adhoc', ['id' => $taskid], '*', MUST_EXIST);
+        $this->assertNotEmpty($record->identityhash);
+
+        $runningtask = \core\task\manager::get_next_adhoc_task($now);
+        $this->assertNotNull($runningtask);
+        \core\task\manager::adhoc_task_starting($runningtask);
+
+        $startedrecord = $DB->get_record('task_adhoc', ['id' => $taskid], '*', MUST_EXIST);
+        $this->assertEquals($record->identityhash, $startedrecord->identityhash);
+        $this->assertNotEmpty($startedrecord->timestarted);
+
+        $duplicatetask = new \core\task\adhoc_test_task();
+        $duplicatetask->set_component('core_testcomponent');
+        $duplicatetask->set_custom_data(['quizid' => 123]);
+        $duplicatetaskid = \core\task\manager::queue_adhoc_task($duplicatetask, true);
+
+        $this->assertEquals($taskid, $duplicatetaskid);
+        $this->assertEquals(1, $DB->count_records('task_adhoc', ['component' => 'core_testcomponent']));
+
+        \core\task\manager::adhoc_task_complete($runningtask);
+    }
+
+    /**
+     * Test that exhausted adhoc tasks are reset when queued again with duplicate detection.
+     *
+     * @covers \core\task\manager::queue_adhoc_task
+     */
+    public function test_reset_task_with_exhausted_attempts_during_insert(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+
+        $task = new \core\task\adhoc_test_task();
+        $task->set_component('core_testcomponent');
+        $task->set_custom_data(['quizid' => 123]);
+        $taskid = \core\task\manager::queue_adhoc_task($task, true);
+        $this->assertIsInt($taskid);
+
+        // Get the task record from the database.
+        $initialrecord = $DB->get_record('task_adhoc', ['component' => 'core_testcomponent'], '*', MUST_EXIST);
+        $this->assertEquals(12, $initialrecord->attemptsavailable);
+        $this->assertNotEmpty($initialrecord->identityhash);
+
+        // Simulate task failing 12 times by manually updating the database to exhaust attempts.
+        $clock = \core\di::get(\core\clock::class);
+        $currenttime = $clock->time();
+
+        // Update the task to simulate complete failure (0 attempts, with fail delay and starting time).
+        $exhaustedrecord = new \stdClass();
+        $exhaustedrecord->id = $initialrecord->id;
+        $exhaustedrecord->attemptsavailable = 0;
+        $exhaustedrecord->faildelay = 86400;
+        // Schedule in future due to failure.
+        $exhaustedrecord->nextruntime = $currenttime + 86400;
+        $DB->update_record('task_adhoc', $exhaustedrecord);
+
+        // Verify the task is now in failed state.
+        $failedrecord = $DB->get_record('task_adhoc', ['id' => $initialrecord->id]);
+        $this->assertEquals(0, $failedrecord->attemptsavailable);
+        $this->assertEquals(86400, $failedrecord->faildelay);
+        $this->assertTrue($failedrecord->nextruntime > $currenttime);
+
+        // Create a new identical task (same component, class, and custom data).
+        $newtask = new \core\task\adhoc_test_task();
+        $newtask->set_component('core_testcomponent');
+        $newtask->set_custom_data(['quizid' => 123]);
+
+        // Store the original values to verify reset.
+        $originalattempts = $newtask->get_attempts_available();
+
+        // Queue the identical task again with duplicate detection enabled.
+        // This should trigger the reset logic for the exhausted task.
+        // Should return the id of existing task (but gets reset).
+        $result = \core\task\manager::queue_adhoc_task($newtask, true);
+        $this->assertEquals($initialrecord->id, $result);
+
+        // Verify that the existing task was reset.
+        $resetrecord = $DB->get_record('task_adhoc', ['id' => $initialrecord->id]);
+
+        // Check that all the reset fields match what we expect from the code.
+        $this->assertEquals($originalattempts, $resetrecord->attemptsavailable);
+        $this->assertEquals(0, $resetrecord->faildelay);
+
+        // Verify only one task record exists (no duplicate was created).
+        $taskcount = $DB->count_records('task_adhoc', ['component' => 'core_testcomponent']);
+        $this->assertEquals(1, $taskcount);
+
+        // Verify the identity hash is preserved (same task identity).
+        $this->assertEquals($initialrecord->identityhash, $resetrecord->identityhash);
+    }
+
+    /**
+     * Test that malformed JSON in custom data throws an exception.
+     */
+    public function test_malformed_json_throws_exception(): void {
+        $this->resetAfterTest();
+
+        $malformedjson = '{"invalid": json, "missing": quote}';
+        $task = new \core\task\adhoc_test_task();
+        $task->set_component('mod_quiz');
+        $task->set_custom_data_as_string($malformedjson);
+
+        $this->expectException(\coding_exception::class);
+        $this->expectExceptionMessageMatches('/Invalid JSON in adhoc task customdata/');
+
+        \core\task\manager::build_task_identity_hash($task);
     }
 }
