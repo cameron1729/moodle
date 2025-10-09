@@ -48,6 +48,9 @@ final class manager implements
     /** @var ?manager the one instance of listener provider and dispatcher */
     private static $instance = null;
 
+    /** @var array<int, self> all manager instances */
+    private static array $instances = [];
+
     /** @var array list of callback definitions for each hook class. */
     private $allcallbacks = [];
 
@@ -56,6 +59,15 @@ final class manager implements
 
     /** @var array list of redirected callbacks in PHPUnit tests */
     private $redirectedcallbacks = [];
+
+    /** @var array list of hooks deferred until transactions complete */
+    private array $deferredcallbacks = [];
+
+    /** @var bool flag indicating deferred callbacks are being processed */
+    private bool $processingdeferred = false;
+
+    /** @var array<string, bool> cache of callback internal attribute lookups */
+    private array $callbackinternalcache = [];
 
     /**
      * Constructor can be used only from factory methods.
@@ -66,6 +78,7 @@ final class manager implements
         /** @var bool Whether this is a PHPUnit instantiated instance */
         private bool $phpunit = false,
     ) {
+        self::$instances[spl_object_id($this)] = $this;
     }
 
     /**
@@ -137,6 +150,32 @@ final class manager implements
             throw new \coding_exception('Invalid call of manager::phpunit_stop_redirections() outside of tests');
         }
         $this->redirectedcallbacks = [];
+    }
+
+    /**
+     * Notification from DML layer that a database transaction committed.
+     */
+    public static function database_transaction_commited(): void {
+        if (empty(self::$instances)) {
+            return;
+        }
+
+        foreach (self::$instances as $instance) {
+            $instance->process_deferred_callbacks();
+        }
+    }
+
+    /**
+     * Notification from DML layer that a database transaction rolled back.
+     */
+    public static function database_transaction_rolledback(): void {
+        if (empty(self::$instances)) {
+            return;
+        }
+
+        foreach (self::$instances as $instance) {
+            $instance->clear_deferred_callbacks();
+        }
     }
 
     /**
@@ -263,6 +302,78 @@ final class manager implements
     }
 
     /**
+     * Determine if the callback should be deferred until transactions complete.
+     *
+     * @param array $definition
+     * @return bool
+     */
+    private function should_defer_callback(array $definition): bool {
+        global $DB;
+
+        if (!array_key_exists('internal', $definition) || $definition['internal']) {
+            return false;
+        }
+
+        if (!isset($DB)) {
+            return false;
+        }
+
+        if (!$DB->is_transaction_started()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Queue the callback for later execution once transactions complete.
+     *
+     * @param object $event
+     * @param array $definition
+     */
+    private function queue_deferred_callback(object $event, array $definition): void {
+        $this->deferredcallbacks[] = [
+            'event' => $event,
+            'callback' => $definition['callback'],
+            'component' => $definition['component'],
+        ];
+    }
+
+    /**
+     * Execute deferred callbacks now that transactions have completed.
+     */
+    private function process_deferred_callbacks(): void {
+        if ($this->processingdeferred) {
+            return;
+        }
+
+        $this->processingdeferred = true;
+
+        while (!empty($this->deferredcallbacks)) {
+            $definition = array_shift($this->deferredcallbacks);
+            $event = $definition['event'];
+
+            if ($event instanceof StoppableEventInterface && $event->isPropagationStopped()) {
+                continue;
+            }
+
+            if ($this->is_callback_valid($definition['component'], $definition['callback'])) {
+                call_user_func($definition['callback'], $event);
+            }
+        }
+
+        $this->processingdeferred = false;
+    }
+
+    /**
+     * Clear any deferred callbacks when a transaction is rolled back.
+     */
+    private function clear_deferred_callbacks(): void {
+        $this->deferredcallbacks = [];
+        $this->processingdeferred = false;
+    }
+
+    /**
      * Returns the list of Hook class names that have registered callbacks.
      *
      * @return array
@@ -294,25 +405,32 @@ final class manager implements
             }
         }
 
-        $callbacks = $this->getListenersForEvent($event);
+        $hookclassname = get_class($event);
+        $definitions = $this->get_callbacks_for_hook($hookclassname);
 
-        if (empty($callbacks)) {
+        if (empty($definitions)) {
             // Nothing is interested in this hook.
             return $event;
         }
 
-        foreach ($callbacks as $callback) {
-            // Note: PSR-14 states:
-            // If passed a Stoppable Event, a Dispatcher
-            // MUST call isPropagationStopped() on the Event before each Listener has been called.
-            // If that method returns true it MUST return the Event to the Emitter immediately and
-            // MUST NOT call any further Listeners. This implies that if an Event is passed to the
-            // Dispatcher that always returns true from isPropagationStopped(), zero listeners will be called.
-            // Ergo, we check for a stopped event before calling each listener, not afterwards.
-            if ($event instanceof StoppableEventInterface) {
-                if ($event->isPropagationStopped()) {
-                    return $event;
-                }
+        foreach ($definitions as $definition) {
+            if ($definition['disabled']) {
+                continue;
+            }
+
+            $callback = $definition['callback'];
+
+            if (!$this->is_callback_valid($definition['component'], $callback)) {
+                continue;
+            }
+
+            if ($event instanceof StoppableEventInterface && $event->isPropagationStopped()) {
+                return $event;
+            }
+
+            if ($this->should_defer_callback($definition)) {
+                $this->queue_deferred_callback($event, $definition);
+                continue;
             }
 
             call_user_func($callback, $event);
@@ -345,6 +463,7 @@ final class manager implements
             if ($usecache) {
                 $this->allcallbacks = $callbacks;
                 $this->alldeprecations = $deprecations;
+                $this->ensure_internal_flags();
                 return;
             }
         }
@@ -388,9 +507,24 @@ final class manager implements
             array_keys($componentfiles),
             $componentfiles,
         );
+        $this->ensure_internal_flags();
         $this->load_callback_overrides();
         $this->prioritise_callbacks();
         $this->fetch_deprecated_callbacks();
+    }
+
+    /**
+     * Ensure each callback definition contains an internal flag.
+     */
+    private function ensure_internal_flags(): void {
+        foreach ($this->allcallbacks as $hook => &$definitions) {
+            foreach ($definitions as &$definition) {
+                if (!array_key_exists('internal', $definition)) {
+                    $definition['internal'] = true;
+                }
+            }
+        }
+        unset($definition, $definitions);
     }
 
     /**
@@ -431,6 +565,11 @@ final class manager implements
                         if (isset($override['priority'])) {
                             $definition['defaultpriority'] = $definition['priority'];
                             $definition['priority'] = (int) $override['priority'];
+                        }
+
+                        if (array_key_exists('internal', $override)) {
+                            $definition['defaultinternal'] = $definition['internal'];
+                            $definition['internal'] = (bool) $override['internal'];
                         }
 
                         if (!empty($override['disabled'])) {
@@ -535,10 +674,15 @@ final class manager implements
                 'component' => $component,
                 'disabled' => false,
                 'priority' => 100,
+                'internal' => $this->is_callback_internal_by_default($callbackmethod),
             ];
 
             if (isset($callbackdata['priority'])) {
                 $callback['priority'] = (int) $callbackdata['priority'];
+            }
+
+            if (array_key_exists('internal', $callbackdata)) {
+                $callback['internal'] = (bool) $callbackdata['internal'];
             }
 
             $hook = ltrim($callbackdata['hook'], '\\'); // Normalise hook class name.
@@ -582,6 +726,31 @@ final class manager implements
         $classmethod = ltrim($classmethod, '\\');
 
         return $classmethod;
+    }
+
+    /**
+     * Determine whether the callback should be treated as internal unless overridden.
+     *
+     * @param string $callbackmethod
+     * @return bool
+     */
+    private function is_callback_internal_by_default(string $callbackmethod): bool {
+        if (array_key_exists($callbackmethod, $this->callbackinternalcache)) {
+            return $this->callbackinternalcache[$callbackmethod];
+        }
+
+        $attribute = attribute_helper::instance($callbackmethod, \core\attribute\hook\after_commit::class);
+        if ($attribute) {
+            return $this->callbackinternalcache[$callbackmethod] = !$attribute->enabled;
+        }
+
+        [$callbackclass] = explode('::', $callbackmethod, 2);
+        $attribute = attribute_helper::instance($callbackclass, \core\attribute\hook\after_commit::class);
+        if ($attribute) {
+            return $this->callbackinternalcache[$callbackmethod] = !$attribute->enabled;
+        }
+
+        return $this->callbackinternalcache[$callbackmethod] = true;
     }
 
     /**
