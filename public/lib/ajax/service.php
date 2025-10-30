@@ -80,10 +80,36 @@ foreach ($requests as $request) {
     $index = clean_param($request['index'], PARAM_INT);
     $args = $request['args'];
 
-    $response = external_api::call_external_function($methodname, $args, true);
+    try {
+        $response = external_api::call_external_function($methodname, $args, true, false);
+    } catch (\Throwable $e) {
+        // Match the webservice server behaviour by aborting any open
+        // transactions (optionally logging details) and returning a
+        // standardised exception object to the client.
+        abort_all_db_transactions();
+
+        if (debugging('', DEBUG_MINIMAL)) {
+            $info = get_exception_info($e);
+            debugging('AJAX exception handler: ' . $info->message . ' Debug: ' . $info->debuginfo, DEBUG_MINIMAL, $info->backtrace);
+        }
+
+        $exception = get_exception_info($e);
+        $exception->backtrace = format_backtrace($exception->backtrace, true);
+        unset($exception->a);
+
+        if (!debugging('', DEBUG_DEVELOPER)) {
+            unset($exception->debuginfo);
+            unset($exception->backtrace);
+        }
+
+        $response['error'] = true;
+        $response['exception'] = $exception;
+    }
+
     $responses[$index] = $response;
 
     if ($response['error']) {
+        abort_all_db_transactions();
         $haserror = true;
         if (!NO_MOODLE_COOKIES) {
             // If there was an error, and this HTTP request includes a Moodle cookie (and therefore a login), reject all

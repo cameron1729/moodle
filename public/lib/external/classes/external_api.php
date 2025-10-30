@@ -176,9 +176,10 @@ class external_api {
      * @param string $function A webservice function name.
      * @param array $args Params array (named params)
      * @param boolean $ajaxonly If true, an extra check will be peformed to see if ajax is required.
+     * @param boolean $catchexceptions If true, catch exceptions and return them in the response array.
      * @return array containing keys for error (bool), exception and data.
      */
-    public static function call_external_function($function, $args, $ajaxonly = false) {
+    public static function call_external_function($function, $args, $ajaxonly = false, $catchexceptions = true) {
         global $PAGE, $COURSE, $CFG, $SITE;
 
         require_once("{$CFG->libdir}/pagelib.php");
@@ -262,6 +263,10 @@ class external_api {
             $response['error'] = false;
             $response['data'] = $result;
         } catch (\Throwable $e) {
+            if (!$catchexceptions) {
+                throw $e;
+            }
+
             $exception = get_exception_info($e);
             unset($exception->a);
             $exception->backtrace = format_backtrace($exception->backtrace, true);
@@ -272,10 +277,10 @@ class external_api {
             $response['error'] = true;
             $response['exception'] = $exception;
             // Do not process the remaining requests.
+        } finally {
+            $PAGE = $currentpage;
+            $COURSE = $currentcourse;
         }
-
-        $PAGE = $currentpage;
-        $COURSE = $currentcourse;
 
         return $response;
     }
