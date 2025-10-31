@@ -80,18 +80,44 @@ class lock {
 
     /**
      * Release this lock
-     * @return bool
+     *
+     * If a database transaction is active the lock release is deferred until after the transaction finishes.
+     *
+     * @return bool True if the lock was released immediately, or the release was deferred.
      */
     public function release() {
+        if ($this->released) {
+            return true;
+        }
+
         $this->released = true;
+
         if (empty($this->factory)) {
             return false;
         }
+
+        return transaction_manager::release_or_queue($this);
+    }
+
+    /**
+     * Perform the actual release of a lock immediately.
+     *
+     * @return bool True if the lock is no longer held (or if it was already released).
+     */
+    public function release_immediately(): bool {
+        transaction_manager::forget($this);
+
+        if (empty($this->factory)) {
+            return false;
+        }
+
         $result = $this->factory->release_lock($this);
+
         // Release any held references to the factory.
         unset($this->factory);
         $this->factory = null;
         $this->key = '';
+
         return $result;
     }
 

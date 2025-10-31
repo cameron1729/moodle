@@ -2742,6 +2742,7 @@ abstract class moodle_database {
         if (empty($this->transactions)) {
             \core\event\manager::database_transaction_commited();
             \core\message\manager::database_transaction_commited();
+            \core\lock\transaction_manager::database_transaction_commited();
         }
     }
 
@@ -2794,6 +2795,7 @@ abstract class moodle_database {
             $this->force_rollback = false;
             \core\event\manager::database_transaction_rolledback();
             \core\message\manager::database_transaction_rolledback();
+            \core\lock\transaction_manager::database_transaction_rolledback();
         }
         throw $e;
     }
@@ -2829,6 +2831,7 @@ abstract class moodle_database {
 
         \core\event\manager::database_transaction_rolledback();
         \core\message\manager::database_transaction_rolledback();
+        \core\lock\transaction_manager::database_transaction_rolledback();
     }
 
     /**
