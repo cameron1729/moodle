@@ -1158,8 +1158,10 @@ final class events_test extends \advanced_testcase {
             'other' => [
                 'quizid' => $quizobj->get_quizid(),
                 'slotnumber' => 1,
-                'page' => 1
-            ]
+                'page' => 1,
+                'questionbankentryid' => 1,
+                'version' => null,
+            ],
         ];
         $event = \mod_quiz\event\slot_created::create($params);
 
