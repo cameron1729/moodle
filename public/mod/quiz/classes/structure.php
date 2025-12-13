@@ -1691,9 +1691,16 @@ class structure {
      * @param array $filtercondition the filter condition. Must contain at least a category filter.
      */
     public function add_random_questions(int $addonpage, int $number, array $filtercondition): void {
-        $category = $this->validate_filtercondition($filtercondition);
+        $category = $this->validate_filter_condition($filtercondition);
         for ($i = 0; $i < $number; $i++) {
-            $randomslot = $this->get_randomslot($category->contextid);
+            $randomslotdata = (object)[
+                'quizid' => $this->get_quizid(),
+                'usingcontextid' => module::instance($this->get_cmid())->id,
+                'questionscontextid' => $category->contextid,
+                'maxmark' => 1,
+            ];
+            $randomslot = new slot_random($randomslotdata);
+            $randomslot->set_quiz($this->get_quiz());
             $randomslot->set_filter_condition(json_encode($filtercondition));
             $randomslot->insert($addonpage);
         }
@@ -1706,8 +1713,11 @@ class structure {
      * @param array $filtercondition
      */
     public function update_random_question(int $slotid, array $filtercondition): void {
-        $category = $this->validate_filtercondition($filtercondition);
-        $randomslot = $this->get_randomslot($category->contextid, $slotid);
+        $category = $this->validate_filter_condition($filtercondition);
+        $slot = $this->get_slot_by_id($slotid);
+        $slot->questionscontextid = $category->contextid;
+        $randomslot = new slot_random($slot);
+        $randomslot->set_quiz($this->get_quiz());
         $randomslot->update_filtercondition($filtercondition);
     }
 
@@ -1722,7 +1732,7 @@ class structure {
      *                                     missing a category.
      * @throws moodle_exception When the specified category doesn't exist.
      */
-    private function validate_filtercondition(array $filtercondition): stdClass {
+    private function validate_filter_condition(array $filtercondition): stdClass {
         global $DB;
 
         if (!isset($filtercondition['filter']['category'])) {
@@ -1739,31 +1749,6 @@ class structure {
         require_capability('moodle/question:useall', $catcontext);
 
         return $category;
-    }
-
-    /**
-     * Get a random slot. If the slot ID parameter is not provided
-     * a new random slot will be created.
-     *
-     * @param int $categorycontextid
-     * @param int|null $slotid
-     * @return slot_random
-     */
-    private function get_randomslot(int $categorycontextid, ?int $slotid = null): slot_random {
-        $randomslotdata = match ($slotid) {
-            null => (object)[
-                'quizid' => $this->get_quizid(),
-                'usingcontextid' => module::instance($this->get_cmid())->id,
-                'maxmark' => 1,
-            ],
-            default => $this->get_slot_by_id($slotid),
-        };
-
-        $randomslotdata->questionscontextid = $categorycontextid;
-        $randomslot = new slot_random($randomslotdata);
-        $randomslot->set_quiz($this->get_quiz());
-
-        return $randomslot;
     }
 
     /**
