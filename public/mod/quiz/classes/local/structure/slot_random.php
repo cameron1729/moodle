@@ -232,8 +232,12 @@ class slot_random {
         $transaction = $DB->start_delegated_transaction();
         $filterconditionjson = json_encode($filtercondition);
         $params = ['component' => 'mod_quiz', 'questionarea' => 'slot', 'itemid' => $this->record->id];
-        $DB->set_field('question_set_references', 'filtercondition', $filterconditionjson, $params);
-        $DB->set_field('question_set_references', 'questionscontextid', $this->referencerecord->questionscontextid, $params);
+        $setreferenceid = $DB->get_field('question_set_references', 'id', $params, MUST_EXIST);
+        $DB->update_record('question_set_references', (object)[
+            'id' => $setreferenceid,
+            'filtercondition' => $filterconditionjson,
+            'questionscontextid' => $this->referencerecord->questionscontextid,
+        ]);
         slot_filtercondition_updated::create([
             'context' => module::instance($cm->id),
             'objectid' => $this->record->id,
