@@ -1729,21 +1729,21 @@ class mysqli_native_moodle_database extends moodle_database {
      *
      * @param string $table
      * @param stdClass|array $dataobject
-     * @param string[] $uniqueindexcolumns list of all columns in unique index
-     * @param array $insertonlyfields additional fields with values to be used only for inserts
+     * @param stdClass|array $insertonlyfields additional data with values to be used only for inserts
      * @return int row id
      */
-    public function upsert_record(string $table, $dataobject, array $uniqueindexcolumns, array $insertonlyfields = []): int {
+    public function upsert_record(string $table, $dataobject, $insertonlyfields = []): int {
         $dataobject = (object)(array)$dataobject;
-
-        $this->validate_upsert_record_arguments($table, $dataobject, $uniqueindexcolumns, $insertonlyfields);
+        $insertonlyfields = (array)$insertonlyfields;
+        $uniqueindexcolumns = $this->validate_upsert_record_arguments($table, $dataobject, $insertonlyfields);
+        $insertonlyfields = array_diff_key($insertonlyfields, array_flip($uniqueindexcolumns));
 
         $columns = $this->get_columns($table);
 
         $values = [];
         $fields = [];
         $params = [];
-        $updates = [];
+        $updates = ["id=LAST_INSERT_ID(id)"];
         foreach ((array)$dataobject as $field => $value) {
             $column = $columns[$field];
             $value = $this->normalise_value($column, $value);
@@ -1766,7 +1766,7 @@ class mysqli_native_moodle_database extends moodle_database {
         $updates = implode(', ', $updates);
 
         $sql = "INSERT INTO {$this->prefix}$table ($fields) VALUES ($values)
-                            ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id), $updates";
+                            ON DUPLICATE KEY UPDATE $updates";
 
         [$sql, $params, $type] = $this->fix_sql_params($sql, $params);
         $rawsql = $this->emulate_bound_params($sql, $params);

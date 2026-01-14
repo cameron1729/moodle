@@ -2956,6 +2956,30 @@ EOD;
         $DB = $this->tdb;
         $dbman = $DB->get_manager();
 
+        try {
+            $DB->upsert_record('config_log', (object)['value' => 'test']);
+            $this->fail('Exception expected');
+        } catch (\core\exception\moodle_exception $ex) {
+            $this->assertInstanceOf(\core\exception\coding_exception::class, $ex);
+            $this->assertSame(
+                'Coding error detected, it must be fixed by a programmer: moodle_database::upsert_record() '
+                . 'Table \'config_log\' must define exactly one unique index',
+                $ex->getMessage()
+            );
+        }
+
+        try {
+            $DB->upsert_record('user', (object)['firstname' => 'test']);
+            $this->fail('Exception expected');
+        } catch (\core\exception\moodle_exception $ex) {
+            $this->assertInstanceOf(\core\exception\coding_exception::class, $ex);
+            $this->assertSame(
+                'Coding error detected, it must be fixed by a programmer: moodle_database::upsert_record() '
+                . 'dataobject must have all unique columns set, missing mnethostid,username',
+                $ex->getMessage()
+            );
+        }
+
         $table = $this->get_test_table();
         $tablename = $table->getName();
 
@@ -2981,7 +3005,7 @@ EOD;
             'course' => '3',
             'value' => '30',
         ];
-        $id3 = $DB->upsert_record($tablename, $record3, ['course']);
+        $id3 = $DB->upsert_record($tablename, $record3);
         $record3 = $DB->get_record($tablename, ['course' => '3']);
         $this->assertSame('30', $record3->value);
         $this->assertSame($id3, (int)$record3->id);
@@ -2990,7 +3014,7 @@ EOD;
             'value' => '40',
             'course' => '3',
         ];
-        $id4 = $DB->upsert_record($tablename, $record4, ['course']);
+        $id4 = $DB->upsert_record($tablename, $record4);
         $record4 = $DB->get_record($tablename, ['course' => '3']);
         $this->assertSame('40', $record4->value);
         $this->assertSame($id4, (int)$record4->id);
@@ -3000,7 +3024,7 @@ EOD;
             'value' => '40',
             'course' => '3',
         ];
-        $id4b = $DB->upsert_record($tablename, $record4, ['course']);
+        $id4b = $DB->upsert_record($tablename, $record4);
         $record4 = $DB->get_record($tablename, ['course' => '3']);
         $this->assertSame($id4, $id4b);
         $this->assertSame((string)$id4, $record4->id);
@@ -3042,7 +3066,7 @@ EOD;
             'value' => '30',
             'value2' => '300',
         ];
-        $DB->upsert_record($tablename2, $record3, ['course', 'name']);
+        $DB->upsert_record($tablename2, $record3);
         $record3 = $DB->get_record($tablename2, ['course' => '3', 'name' => 'abc']);
         $this->assertSame('30', $record3->value);
         $this->assertSame('300', $record3->value2);
@@ -3053,7 +3077,7 @@ EOD;
             'value' => '40',
             'value2' => '400',
         ];
-        $DB->upsert_record($tablename2, $record4, ['name', 'course']);
+        $DB->upsert_record($tablename2, $record4);
         $record4 = $DB->get_record($tablename2, ['course' => '3', 'name' => 'def']);
         $this->assertSame('40', $record4->value);
         $this->assertSame('400', $record4->value2);
@@ -3066,7 +3090,7 @@ EOD;
             'name' => 'def',
             'value' => '50',
         ];
-        $DB->upsert_record($tablename2, $record5, ['name', 'course']);
+        $DB->upsert_record($tablename2, $record5);
         $record5 = $DB->get_record($tablename2, ['course' => '3', 'name' => 'def']);
         $this->assertSame('50', $record5->value);
         $this->assertSame('400', $record5->value2);
@@ -3078,20 +3102,11 @@ EOD;
             'value' => '60',
             'value2' => '600',
         ];
-        $DB->upsert_record($tablename2, $record6, ['name', 'course']);
+        $DB->upsert_record($tablename2, $record6);
         $record6 = $DB->get_record($tablename2, ['course' => '3', 'name' => 'def']);
         $this->assertSame('60', $record6->value);
         $this->assertSame('600', $record6->value2);
         $this->assertSame($record4->id, $record6->id);
-
-        try {
-            $DB->upsert_record($tablename2, $record5, []);
-            $this->fail('Exception expected');
-        } catch (\core\exception\moodle_exception $ex) {
-            $this->assertInstanceOf(\core\exception\coding_exception::class, $ex);
-            $this->assertSame('Coding error detected, it must be fixed by a programmer:'
-                . ' moodle_database::upsert_record() requires list of unique constraint columns', $ex->getMessage());
-        }
 
         $record = [
             'course' => '3',
@@ -3099,12 +3114,15 @@ EOD;
             'value' => '50',
         ];
         try {
-            $DB->upsert_record($tablename2, $record, ['course', 'name']);
+            $DB->upsert_record($tablename2, $record);
             $this->fail('Exception expected');
         } catch (\core\exception\moodle_exception $ex) {
             $this->assertInstanceOf(\core\exception\coding_exception::class, $ex);
-            $this->assertSame('Coding error detected, it must be fixed by a programmer:'
-                . ' moodle_database::upsert_record() dataobject must have all unique columns set', $ex->getMessage());
+            $this->assertSame(
+                'Coding error detected, it must be fixed by a programmer: moodle_database::upsert_record() '
+                . 'dataobject must have all unique columns set, missing name',
+                $ex->getMessage()
+            );
         }
 
         $record = [
@@ -3118,8 +3136,11 @@ EOD;
             $this->fail('Exception expected');
         } catch (\core\exception\moodle_exception $ex) {
             $this->assertInstanceOf(\core\exception\coding_exception::class, $ex);
-            $this->assertSame('Coding error detected, it must be fixed by a programmer:'
-                . ' moodle_database::upsert_record() dataobject must not have id property', $ex->getMessage());
+            $this->assertSame(
+                'Coding error detected, it must be fixed by a programmer: moodle_database::upsert_record() '
+                . 'dataobject must not have id property',
+                $ex->getMessage()
+            );
         }
 
         $record = [
@@ -3129,26 +3150,26 @@ EOD;
             'value' => '50',
         ];
         try {
-            $DB->upsert_record($tablename2, $record, ['course', 'name']);
+            $DB->upsert_record($tablename2, $record);
             $this->fail('Exception expected');
         } catch (\core\exception\moodle_exception $ex) {
             $this->assertInstanceOf(\core\exception\coding_exception::class, $ex);
-            $this->assertSame('Coding error detected, it must be fixed by a programmer:'
-                . ' moodle_database::upsert_record() dataobject contains unknown column', $ex->getMessage());
+            $this->assertSame(
+                'Coding error detected, it must be fixed by a programmer: moodle_database::upsert_record() '
+                . 'dataobject contains unknown column \'xyz\'',
+                $ex->getMessage()
+            );
         }
 
         $record = [
             'course' => '3',
             'name' => 'abc',
         ];
-        try {
-            $DB->upsert_record($tablename2, $record, ['course', 'name']);
-            $this->fail('Exception expected');
-        } catch (\core\exception\moodle_exception $ex) {
-            $this->assertInstanceOf(\core\exception\coding_exception::class, $ex);
-            $this->assertSame('Coding error detected, it must be fixed by a programmer:'
-                . ' moodle_database::upsert_record() dataobject must contain at least one non-unique column', $ex->getMessage());
-        }
+        $id = $DB->upsert_record($tablename2, $record);
+        $this->assertNotNull($id);
+
+        $id2 = $DB->upsert_record($tablename2, $record);
+        $this->assertEquals($id, $id2);
 
         // Test compatibility with transaction commit.
 
@@ -3160,7 +3181,7 @@ EOD;
             'value' => '70',
             'value2' => '700',
         ];
-        $DB->upsert_record($tablename2, $record7, ['name', 'course']);
+        $DB->upsert_record($tablename2, $record7);
         $record7 = $DB->get_record($tablename2, ['course' => '3', 'name' => 'def']);
         $this->assertSame('70', $record7->value);
         $this->assertSame('700', $record7->value2);
@@ -3172,7 +3193,7 @@ EOD;
             'value' => '80',
             'value2' => '800',
         ];
-        $DB->upsert_record($tablename2, $record8, ['name', 'course']);
+        $DB->upsert_record($tablename2, $record8);
         $record8 = $DB->get_record($tablename2, ['course' => '11', 'name' => 'def']);
         $this->assertSame('80', $record8->value);
         $this->assertSame('800', $record8->value2);
@@ -3197,7 +3218,7 @@ EOD;
             'value' => '90',
             'value2' => '900',
         ];
-        $DB->upsert_record($tablename2, $record7, ['name', 'course']);
+        $DB->upsert_record($tablename2, $record7);
         $record7 = $DB->get_record($tablename2, ['course' => '3', 'name' => 'def']);
         $this->assertSame('90', $record7->value);
         $this->assertSame('900', $record7->value2);
@@ -3209,7 +3230,7 @@ EOD;
             'value' => '100',
             'value2' => '1000',
         ];
-        $DB->upsert_record($tablename2, $record9, ['name', 'course']);
+        $DB->upsert_record($tablename2, $record9);
         $record9 = $DB->get_record($tablename2, ['course' => '12', 'name' => 'def']);
         $this->assertSame('100', $record9->value);
         $this->assertSame('1000', $record9->value2);
@@ -3235,37 +3256,79 @@ EOD;
             'value' => '91',
             'value2' => '901',
         ];
-        $DB->upsert_record($tablename2, $record7, ['name', 'course']);
+        $DB->upsert_record($tablename2, $record7);
         $record9 = [
             'course' => '14',
             'name' => 'def',
             'value' => '10',
             'value2' => '100',
         ];
-        $DB->upsert_record($tablename2, $record9, ['name', 'course']);
+        $DB->upsert_record($tablename2, $record9);
         if ($DB->get_dbfamily() !== 'mssql') {
             // This will fail with fallback upsert code from moodle_base.
             $this->assertSame($dbreads, $DB->perf_get_reads());
         }
         $this->assertGreaterThan($dbwrites, $DB->perf_get_writes());
 
-        // Test insert-only-fields.
+        // Test records can be objects or arrays.
+        $DB->delete_records($tablename2);
 
-        $DB->delete_records($tablename2, []);
+        $record = [
+            'course' => 1,
+            'name' => 'name',
+        ];
+        $insert = [
+            'value' => 10,
+        ];
+        $DB->upsert_record($tablename2, $record, $insert);
+        $this->assertSame(1, $DB->count_records($tablename2));
+        $DB->upsert_record($tablename2, $record, $insert);
+        $this->assertSame(1, $DB->count_records($tablename2));
+        $DB->delete_records($tablename2);
+
+        $DB->upsert_record($tablename2, (object)$record, $insert);
+        $this->assertSame(1, $DB->count_records($tablename2));
+        $DB->upsert_record($tablename2, (object)$record, $insert);
+        $this->assertSame(1, $DB->count_records($tablename2));
+        $DB->delete_records($tablename2);
+
+        $DB->upsert_record($tablename2, (object)$record, $insert);
+        $this->assertSame(1, $DB->count_records($tablename2));
+        $DB->upsert_record($tablename2, $record, $insert);
+        $this->assertSame(1, $DB->count_records($tablename2));
+        $DB->delete_records($tablename2);
+
+        $DB->upsert_record($tablename2, $record, $insert);
+        $this->assertSame(1, $DB->count_records($tablename2));
+        $DB->upsert_record($tablename2, (object)$record, $insert);
+        $this->assertSame(1, $DB->count_records($tablename2));
+        $DB->delete_records($tablename2);
+
+        $DB->upsert_record($tablename2, $record, $insert);
+        $this->assertSame(1, $DB->count_records($tablename2));
+        $DB->upsert_record($tablename2, $record, $insert);
+        $this->assertSame(1, $DB->count_records($tablename2));
+        $DB->delete_records($tablename2);
+
+        $DB->upsert_record($tablename2, $record, (object)$insert);
+        $this->assertSame(1, $DB->count_records($tablename2));
+        $DB->upsert_record($tablename2, $record, (object)$insert);
+        $this->assertSame(1, $DB->count_records($tablename2));
+        $DB->delete_records($tablename2);
 
         $record1 = [
             'course' => '3',
             'name' => 'abc',
             'value' => '1',
         ];
-        $id = $DB->upsert_record($tablename2, $record1, ['name', 'course'], ['value2' => '111']);
+        $id = $DB->upsert_record($tablename2, $record1, ['value2' => '111']);
         $record = $DB->get_record($tablename2, ['id' => $id], '*', MUST_EXIST);
         $this->assertSame('3', $record->course);
         $this->assertSame('abc', $record->name);
         $this->assertSame('1', $record->value);
         $this->assertSame('111', $record->value2);
 
-        $id2 = $DB->upsert_record($tablename2, $record1, ['name', 'course'], ['value2' => '222']);
+        $id2 = $DB->upsert_record($tablename2, $record1, ['value2' => '222']);
         $this->assertSame($id, $id2);
         $record = $DB->get_record($tablename2, ['id' => $id2], '*', MUST_EXIST);
         $this->assertSame('3', $record->course);
@@ -3278,7 +3341,7 @@ EOD;
             'name' => 'abc',
             'value' => '2',
         ];
-        $id3 = $DB->upsert_record($tablename2, $record2, ['name', 'course'], ['value2' => '333']);
+        $id3 = $DB->upsert_record($tablename2, $record2, ['value2' => '333']);
         $this->assertSame($id, $id3);
         $record = $DB->get_record($tablename2, ['id' => $id2], '*', MUST_EXIST);
         $this->assertSame('3', $record->course);
@@ -3287,37 +3350,64 @@ EOD;
         $this->assertSame('111', $record->value2);
 
         try {
-            $DB->upsert_record($tablename2, $record1, ['name', 'course'], ['xvalue2' => '222']);
+            $DB->upsert_record($tablename2, $record1, ['xvalue2' => '222']);
             $this->fail('Exception expected');
         } catch (\core\exception\moodle_exception $ex) {
             $this->assertInstanceOf(\core\exception\coding_exception::class, $ex);
             $this->assertSame(
                 'Coding error detected, it must be fixed by a programmer: moodle_database::upsert_record() '
-                . 'insertonlyfields contains unknown column',
+                . 'insertonlyfields contains unknown column \'xvalue2\'=222',
                 $ex->getMessage()
             );
         }
 
         try {
-            $DB->upsert_record($tablename2, $record1, ['name', 'course'], ['value' => '222']);
+            $DB->upsert_record($tablename2, $record1, ['value' => '222']);
             $this->fail('Exception expected');
         } catch (\core\exception\moodle_exception $ex) {
             $this->assertInstanceOf(\core\exception\coding_exception::class, $ex);
             $this->assertSame(
                 'Coding error detected, it must be fixed by a programmer: moodle_database::upsert_record() '
-                . 'insertonlyfields must not share columns with dataobject',
+                . 'insertonlyfields must not share column \'value\' with dataobject',
                 $ex->getMessage()
             );
         }
 
+        // Allow insert fields to contain the same index fields
+        // as long as they exactly overlap and have the same values.
+        $record = [
+            'course' => 1,
+            'name' => 'name',
+        ];
+        $insert = [
+            'course' => 1,
+            'name' => 'name',
+            'value' => 10,
+        ];
+        $DB->upsert_record($tablename2, $record, $insert);
+        $this->assertSame(1, $DB->count_records($tablename2));
+        $DB->upsert_record($tablename2, $record, $insert);
+        $this->assertSame(1, $DB->count_records($tablename2));
+        $DB->delete_records($tablename2);
+
+        $record = [
+            'course' => 1,
+            'name' => 'something',
+        ];
+        $insert = [
+            'course' => 1,
+            'name' => 'different',
+            'value' => 10,
+        ];
+
         try {
-            $DB->upsert_record($tablename2, $record1, ['name', 'course'], ['name' => '222']);
+            $DB->upsert_record($tablename2, $record, $insert);
             $this->fail('Exception expected');
         } catch (\core\exception\moodle_exception $ex) {
             $this->assertInstanceOf(\core\exception\coding_exception::class, $ex);
             $this->assertSame(
                 'Coding error detected, it must be fixed by a programmer: moodle_database::upsert_record() '
-                . 'insertonlyfields cannot contain unique columns',
+                . 'insertonlyfields contains \'name\'=>different but is different to the data object \'name\'->something',
                 $ex->getMessage()
             );
         }

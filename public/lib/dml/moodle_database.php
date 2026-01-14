@@ -1885,6 +1885,43 @@ abstract class moodle_database {
     abstract public function update_record_raw($table, $params, $bulk=false);
 
     /**
+     * Returns the field names that make up the single unique index on a table.
+     *
+     * This method asserts that the specified table defines exactly one unique
+     * index and returns its ordered list of fields.
+     *
+     * The result is cached in the DML metacache for performance.
+     *
+     * @param string $tablename The database table name, without the prefix.
+     * @return string[] Ordered list of field names that comprise the unique index.
+     *
+     * @throws coding_exception If the table has zero or more than one unique index.
+     */
+    protected function get_unique_index_fields(string $tablename): array {
+
+        $cachekey = "uniqueindexfields:{$tablename}";
+        if ($fields = $this->get_metacache()->get($cachekey)) {
+            return $fields;
+        }
+
+        $indexes = $this->get_indexes($tablename);
+        $uniqueindexes = array_filter(
+            $indexes,
+            static fn(array $tableindex): bool => !empty($tableindex['unique'])
+        );
+
+        if (count($uniqueindexes) !== 1) {
+            throw new coding_exception(
+                "moodle_database::upsert_record() Table '{$tablename}' must define exactly one unique index"
+            );
+        }
+
+        $fields = reset($uniqueindexes)['columns'];
+        $this->get_metacache()->set($cachekey, $fields);
+        return $fields;
+    }
+
+    /**
      * Update a record in a table
      *
      * $dataobject is an object containing needed data
@@ -1905,16 +1942,16 @@ abstract class moodle_database {
      *
      * @param string $table
      * @param stdClass $dataobject
-     * @param array $uniqueindexcolumns
      * @param array $insertonlyfields
-     * @return void
+     * @return array of uniqueindexcolumns
      */
     protected function validate_upsert_record_arguments(
         string $table,
         stdClass $dataobject,
-        array $uniqueindexcolumns,
         array $insertonlyfields
-    ): void {
+    ): array {
+        $uniqueindexcolumns = $this->get_unique_index_fields($table);
+
         if (!$uniqueindexcolumns) {
             throw new \core\exception\coding_exception(
                 'moodle_database::upsert_record() requires list of unique constraint columns'
@@ -1927,12 +1964,16 @@ abstract class moodle_database {
             );
         }
 
+        $missing = [];
         foreach ($uniqueindexcolumns as $column) {
             if (!isset($dataobject->$column)) {
-                throw new \core\exception\coding_exception(
-                    'moodle_database::upsert_record() dataobject must have all unique columns set'
-                );
+                $missing[] = $column;
             }
+        }
+        if (!empty($missing)) {
+            throw new \core\exception\coding_exception(
+                'moodle_database::upsert_record() dataobject must have all unique columns set, missing ' . join(',', $missing)
+            );
         }
 
         $columns = $this->get_columns($table);
@@ -1940,38 +1981,34 @@ abstract class moodle_database {
         foreach ($insertonlyfields as $k => $v) {
             if (!isset($columns[$k])) {
                 throw new \core\exception\coding_exception(
-                    'moodle_database::upsert_record() insertonlyfields contains unknown column'
+                    "moodle_database::upsert_record() insertonlyfields contains unknown column '$k'=$v"
                 );
             }
             if (in_array($k, $uniqueindexcolumns)) {
+                // We allow the insert fields to also contain the index fields, as long as
+                // the values exactly match those of the data object.
+                $value = $dataobject->{$k};
+                if ($v != $value) {
+                    throw new \core\exception\coding_exception(
+                        "moodle_database::upsert_record() insertonlyfields contains '$k'=>$v"
+                        . " but is different to the data object '$k'->$value"
+                    );
+                }
+            } else if (property_exists($dataobject, $k)) {
                 throw new \core\exception\coding_exception(
-                    'moodle_database::upsert_record() insertonlyfields cannot contain unique columns'
-                );
-            }
-            if (property_exists($dataobject, $k)) {
-                throw new \core\exception\coding_exception(
-                    'moodle_database::upsert_record() insertonlyfields must not share columns with dataobject'
+                    "moodle_database::upsert_record() insertonlyfields must not share column '$k' with dataobject"
                 );
             }
         }
 
-        $foundnonunique = false;
         foreach ((array)$dataobject as $field => $value) {
             if (!isset($columns[$field])) {
                 throw new \core\exception\coding_exception(
-                    'moodle_database::upsert_record() dataobject contains unknown column'
+                    "moodle_database::upsert_record() dataobject contains unknown column '$field'"
                 );
             }
-            if (!$foundnonunique && !in_array($field, $uniqueindexcolumns)) {
-                $foundnonunique = true;
-            }
         }
-
-        if (!$foundnonunique) {
-            throw new \core\exception\coding_exception(
-                'moodle_database::upsert_record() dataobject must contain at least one non-unique column'
-            );
-        }
+        return $uniqueindexcolumns;
     }
 
     /**
@@ -1984,17 +2021,15 @@ abstract class moodle_database {
      *
      * @param string $table
      * @param stdClass|array $dataobject
-     * @param string[] $uniqueindexcolumns list of all columns in unique index
-     * @param array $insertonlyfields additional fields with values to be used only for inserts
+     * @param stdClass|array $insertonlyfields additional data with values to be used only for inserts
      * @return int row id
      */
-    public function upsert_record(string $table, $dataobject, array $uniqueindexcolumns, array $insertonlyfields = []): int {
+    public function upsert_record(string $table, $dataobject, $insertonlyfields = []): int {
 
         // NOTE: this is a fallback implementation for databases that do not have native UPSERT.
-
         $dataobject = (object)(array)$dataobject;
 
-        $this->validate_upsert_record_arguments($table, $dataobject, $uniqueindexcolumns, $insertonlyfields);
+        $uniqueindexcolumns = $this->validate_upsert_record_arguments($table, $dataobject, $insertonlyfields);
 
         $conditions = [];
         foreach ($uniqueindexcolumns as $column) {

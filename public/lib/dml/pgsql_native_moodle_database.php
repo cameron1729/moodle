@@ -1404,14 +1404,14 @@ class pgsql_native_moodle_database extends moodle_database {
      *
      * @param string $table
      * @param stdClass|array $dataobject
-     * @param string[] $uniqueindexcolumns list of all columns in unique index
-     * @param array $insertonlyfields additional fields with values to be used only for inserts
+     * @param stdClass|array $insertonlyfields additional data with values to be used only for inserts
      * @return int row id
      */
-    public function upsert_record(string $table, $dataobject, array $uniqueindexcolumns, array $insertonlyfields = []): int {
+    public function upsert_record(string $table, $dataobject, $insertonlyfields = []): int {
         $dataobject = (object)(array)$dataobject;
-
-        $this->validate_upsert_record_arguments($table, $dataobject, $uniqueindexcolumns, $insertonlyfields);
+        $insertonlyfields = (array)$insertonlyfields;
+        $uniqueindexcolumns = $this->validate_upsert_record_arguments($table, $dataobject, $insertonlyfields);
+        $insertonlyfields = array_diff_key($insertonlyfields, array_flip($uniqueindexcolumns));
 
         $columns = $this->get_columns($table);
 
@@ -1441,6 +1441,12 @@ class pgsql_native_moodle_database extends moodle_database {
         $fields = implode(',', $fields);
         $constraint = implode(',', $uniqueindexcolumns);
         $updates = implode(', ', $updates);
+
+        if (!$updates) {
+            // If no other fields are updated, then do a fake set so we can
+            // still get back the id record.
+            $updates = $uniqueindexcolumns[0] . ' = EXCLUDED.' . $uniqueindexcolumns[0];
+        }
 
         $sql = "INSERT INTO {$this->prefix}$table ($fields) VALUES ($values)
                 ON CONFLICT ($constraint) DO UPDATE SET $updates RETURNING id";
