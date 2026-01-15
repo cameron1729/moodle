@@ -268,8 +268,11 @@ class manager {
         $record->timecreated = $clock->time();
 
         // Check if the same task is already scheduled.
-        if ($checkforexisting && self::task_is_scheduled($task)) {
-            return false;
+        if ($checkforexisting) {
+            $existing = self::get_queued_adhoc_task_record($task);
+            if ($existing) {
+                return $existing->id;
+            }
         }
 
         // Queue the task.
