@@ -616,47 +616,64 @@ final class attempts_test extends \advanced_testcase {
         $this->setAdminUser();
 
         $course = $this->getDataGenerator()->create_course();
-        $student = $this->getDataGenerator()->create_user();
+        $student1 = $this->getDataGenerator()->create_user();
+        $student2 = $this->getDataGenerator()->create_user();
         $studentrole = $DB->get_record('role', ['shortname' => 'student']);
-        $this->assertTrue(enrol_try_internal_enrol($course->id, $student->id, $studentrole->id));
+        $this->assertTrue(enrol_try_internal_enrol($course->id, $student1->id, $studentrole->id));
+        $this->assertTrue(enrol_try_internal_enrol($course->id, $student2->id, $studentrole->id));
 
         $quizgenerator = $this->getDataGenerator()->get_plugin_generator('mod_quiz');
+        $questiongenerator = $this->getDataGenerator()->get_plugin_generator('core_question');
 
         $quiz = $quizgenerator->create_instance([
             'course' => $course->id,
             'overduehandling' => 'autosubmit',
-            'timeclose' => 2000,
-            'timelimit' => 60,
+            'timelimit' => 1,
         ]);
 
-        $attemptid = $DB->insert_record('quiz_attempts', [
-            'quiz' => $quiz->id,
-            'userid' => $student->id,
-            'attempt' => 1,
-            'state' => 'inprogress',
-            'timestart' => 100,
-            'timecheckstate' => 0,
-            'layout' => '',
-            'uniqueid' => $this->usage_id($quiz),
-        ]);
+        $category = $questiongenerator->create_question_category();
+        $question = $questiongenerator->create_question('truefalse', null, ['category' => $category->id]);
+        $quizobj = quiz_settings::create($quiz->id);
+        quiz_add_quiz_question($question->id, $quiz);
+        $quizobj->get_grade_calculator()->recompute_quiz_sumgrades();
 
-        $finishedtime = 1500;
+        // Create one attempt that is already finished and one that cron should submit.
+        $this->setUser($student1);
+        $finishedattempt = $quizgenerator->create_attempt($quiz->id, $student1->id);
+        $finishedattemptid = $finishedattempt->id;
+
+        $this->setUser($student2);
+        $overdueattempt = $quizgenerator->create_attempt($quiz->id, $student2->id);
+        $overdueattemptid = $overdueattempt->id;
+
+        $finishedtime = $finishedattempt->timestart + 10;
         $DB->update_record('quiz_attempts', (object)[
-            'id' => $attemptid,
+            'id' => $finishedattemptid,
             'state' => 'finished',
             'timemodified' => $finishedtime,
             'timefinish' => $finishedtime,
             'timecheckstate' => null,
         ]);
 
-        $attemptinfo = (object)[
-            'id' => $attemptid,
-            'quiz' => $quiz->id,
-            'usertimeclose' => (int) $quiz->timeclose,
-            'usertimelimit' => (int) $quiz->timelimit,
+        $attemptsinfo = [
+            (object)[
+                'id' => $finishedattemptid,
+                'quiz' => $quiz->id,
+                'usertimeclose' => 0,
+                'usertimelimit' => 1,
+            ],
+            (object)[
+                'id' => $overdueattemptid,
+                'quiz' => $quiz->id,
+                'usertimeclose' => 0,
+                'usertimelimit' => 1,
+            ],
         ];
 
-        $recordset = new class ([$attemptinfo]) extends moodle_recordset {
+        $originaloverdueattempt = $DB->get_record('quiz_attempts', ['id' => $overdueattemptid]);
+        $this->assertEquals('inprogress', $originaloverdueattempt->state);
+
+        $recordset = new class ($attemptsinfo) extends moodle_recordset {
             /** @var array */
             private array $records;
 
@@ -718,6 +735,8 @@ final class attempts_test extends \advanced_testcase {
             }
         };
 
+        $this->setAdminUser();
+
         $overduetask = new class ($recordset) extends update_overdue_attempts {
             /** @var moodle_recordset */
             private moodle_recordset $recordset;
@@ -743,11 +762,17 @@ final class attempts_test extends \advanced_testcase {
             }
         };
 
-        $overduetask->update_all_overdue_attempts($finishedtime + 120, 0);
+        $timenow = $overdueattempt->timestart + 100;
+        $overduetask->update_all_overdue_attempts($timenow, 0);
 
-        $latestattempt = $DB->get_record('quiz_attempts', ['id' => $attemptid]);
-        $this->assertEquals($finishedtime, $latestattempt->timefinish);
-        $this->assertEquals($finishedtime, $latestattempt->timemodified);
-        $this->assertEquals('finished', $latestattempt->state);
+        $latestfinishedattempt = $DB->get_record('quiz_attempts', ['id' => $finishedattemptid]);
+        $this->assertEquals($finishedtime, $latestfinishedattempt->timefinish);
+        $this->assertEquals($finishedtime, $latestfinishedattempt->timemodified);
+        $this->assertEquals('finished', $latestfinishedattempt->state);
+
+        $latestoverdueattempt = $DB->get_record('quiz_attempts', ['id' => $overdueattemptid]);
+        $this->assertEquals('finished', $latestoverdueattempt->state);
+        $this->assertGreaterThan(0, $latestoverdueattempt->timefinish);
+        $this->assertNotEquals(0, $latestoverdueattempt->timemodified);
     }
 }
