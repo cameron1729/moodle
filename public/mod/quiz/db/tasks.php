@@ -27,7 +27,7 @@ defined('MOODLE_INTERNAL') || die();
 
 $tasks = [
     [
-        'classname' => 'mod_quiz\task\update_overdue_attempts',
+        'classname' => 'mod_quiz\task\queue_overdue_attempt_updates',
         'blocking' => 0,
         'minute' => '*',
         'hour' => '*',
