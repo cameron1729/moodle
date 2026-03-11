@@ -40,6 +40,7 @@ require_once($CFG->dirroot . '/mod/quiz/locallib.php');
  * @copyright  2017 Michael Hughes
  * @author Michael Hughes
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @deprecated Since Moodle 5.2. Replaced by queue_overdue_attempt_updates and update_overdue_attempt tasks.
  *
  */
 class update_overdue_attempts extends \core\task\scheduled_task {
@@ -52,6 +53,8 @@ class update_overdue_attempts extends \core\task\scheduled_task {
      * Close off any overdue attempts.
      */
     public function execute() {
+        debugging(__METHOD__ . ' is deprecated. Use mod_quiz\\task\\queue_overdue_attempt_updates instead.', DEBUG_DEVELOPER);
+
         $timenow = time();
         $processto = $timenow - get_config('quiz', 'graceperiodmin');
 

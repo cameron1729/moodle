@@ -1,0 +1,8 @@
+issueNumber: MDL-88158
+notes:
+  mod_quiz:
+    - message: >-
+        mod_quiz\task\update_overdue_attempts is deprecated. Use
+        mod_quiz\task\queue_overdue_attempt_updates with
+        mod_quiz\task\update_overdue_attempt.
+      type: deprecated
