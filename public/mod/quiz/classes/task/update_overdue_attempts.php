@@ -24,6 +24,8 @@
  */
 namespace mod_quiz\task;
 
+use core\attribute\deprecated;
+use core\deprecation;
 use mod_quiz\quiz_attempt;
 use moodle_exception;
 use moodle_recordset;
@@ -40,8 +42,10 @@ require_once($CFG->dirroot . '/mod/quiz/locallib.php');
  * @copyright  2017 Michael Hughes
  * @author Michael Hughes
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @deprecated Since Moodle 5.2. Replaced by queue_overdue_attempt_updates and update_overdue_attempt tasks.
  *
  */
+#[deprecated(replacement: queue_overdue_attempt_updates::class, since: '5.2', mdl: 'MDL-88158')]
 class update_overdue_attempts extends \core\task\scheduled_task {
 
     public function get_name(): string {
@@ -52,6 +56,8 @@ class update_overdue_attempts extends \core\task\scheduled_task {
      * Close off any overdue attempts.
      */
     public function execute() {
+        deprecation::emit_deprecation([self::class, __FUNCTION__]);
+
         $timenow = time();
         $processto = $timenow - get_config('quiz', 'graceperiodmin');
 
