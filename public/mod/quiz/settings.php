@@ -83,6 +83,17 @@ if ($ADMIN->fulltree) {
         get_string('graceperiodmin', 'quiz'), get_string('graceperiodmin_desc', 'quiz'),
         60, 1));
 
+    // Maximum runtime for queueing overdue attempt updates.
+    $quizsettings->add(
+        new admin_setting_configduration(
+            'quiz/overdueattemptsmaxruntime',
+            get_string('overdueattemptsmaxruntime', 'quiz'),
+            get_string('overdueattemptsmaxruntime_desc', 'quiz'),
+            0,
+            1,
+        ),
+    );
+
     // Initial number of feedback items.
     $quizsettings->add(new admin_setting_configtext('quiz/initialnumfeedbacks',
         get_string('initialnumfeedbacks', 'quiz'), get_string('initialnumfeedbacks_desc', 'quiz'),
