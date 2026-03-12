@@ -142,9 +142,9 @@ final class update_overdue_attempt_test extends advanced_testcase {
     }
 
     /**
-     * An attempt referencing a missing quiz should fail without retries.
+     * An attempt referencing a missing quiz should be skipped.
      */
-    public function test_execute_fails_for_missing_quiz(): void {
+    public function test_execute_skips_attempt_with_missing_quiz(): void {
         global $DB;
 
         $this->resetAfterTest();
@@ -156,15 +156,12 @@ final class update_overdue_attempt_test extends advanced_testcase {
 
         $task = new update_overdue_attempt();
         $task->set_custom_data((object)['attemptid' => $attemptid]);
+        $task->execute();
 
-        try {
-            $task->execute();
-            $this->fail('Expected coding_exception for missing quiz.');
-        } catch (coding_exception $e) {
-            $this->assertStringContainsString('quiz', $e->getMessage());
-            $this->assertStringContainsString('not found', $e->getMessage());
-            $this->assertEquals(0, $task->get_attempts_available());
-        }
+        $attempt = $DB->get_record('quiz_attempts', ['id' => $attemptid], '*', MUST_EXIST);
+        $this->assertEquals(quiz_attempt::IN_PROGRESS, $attempt->state);
+        $this->assertEquals(0, (int)$attempt->timefinish);
+        $this->assertEquals(12, $task->get_attempts_available());
     }
 
     /**
