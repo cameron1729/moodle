@@ -110,9 +110,8 @@ final class queue_overdue_attempt_updates_test extends advanced_testcase {
         manager::queue_adhoc_task($task, true);
 
         $task = new queue_overdue_attempt_updates();
-        ob_start();
+        $this->expectOutputRegex('/Queued 2 overdue attempt update tasks after scanning 3 attempts\./');
         $task->execute();
-        ob_end_clean();
 
         $classname = manager::get_canonical_class_name(update_overdue_attempt::class);
 
@@ -166,9 +165,8 @@ final class queue_overdue_attempt_updates_test extends advanced_testcase {
         $DB->set_field('quiz_attempts', 'state', quiz_attempt::FINISHED, ['id' => $finishedold]);
 
         $task = new queue_overdue_attempt_updates();
-        ob_start();
+        $this->expectOutputRegex('/Queued 2 overdue attempt update tasks after scanning 2 attempts\./');
         $task->execute();
-        ob_end_clean();
 
         $classname = manager::get_canonical_class_name(update_overdue_attempt::class);
 
