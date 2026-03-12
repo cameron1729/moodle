@@ -58,10 +58,10 @@ final class update_overdue_attempt_test extends advanced_testcase {
         $category = $questiongenerator->create_question_category();
         $question = $questiongenerator->create_question('truefalse', null, ['category' => $category->id]);
         quiz_add_quiz_question($question->id, $quiz);
-        quiz_settings::create($quiz->id)->get_grade_calculator()->recompute_quiz_sumgrades();
+        quiz_settings::create((int)$quiz->id)->get_grade_calculator()->recompute_quiz_sumgrades();
 
         $this->setUser($student);
-        $attempt = $quizgenerator->create_attempt($quiz->id, $student->id);
+        $attempt = $quizgenerator->create_attempt((int)$quiz->id, (int)$student->id);
 
         $DB->update_record('quiz_attempts', (object)[
             'id' => $attempt->id,
