@@ -21,7 +21,6 @@ namespace mod_quiz\task;
 use coding_exception;
 use core\task\adhoc_task;
 use mod_quiz\quiz_attempt;
-use moodle_exception;
 use Override;
 use stdClass;
 
@@ -53,34 +52,42 @@ class update_overdue_attempt extends adhoc_task {
         $processto = $timenow - (int)get_config('quiz', 'graceperiodmin');
 
         if ($attemptid === false) {
+            $this->set_attempts_available(0);
             throw new coding_exception(__METHOD__ . ' requires a valid attemptid in customdata.');
         }
 
-        try {
-            // Recheck the latest attempt state and user-specific timing data before processing.
-            $attempt = $this->get_attempt_to_process($attemptid, $processto);
-            if (!$attempt) {
-                return;
-            }
-
-            $quiz = $DB->get_record('quiz', ['id' => $attempt->quiz], '*', MUST_EXIST);
-            $cm = get_coursemodule_from_instance('quiz', $attempt->quiz);
-            $course = get_course($quiz->course);
-
-            $quizforuser = clone($quiz);
-            $quizforuser->timeclose = $attempt->usertimeclose;
-            $quizforuser->timelimit = $attempt->usertimelimit;
-
-            $attemptobj = new quiz_attempt($attempt, $quizforuser, $cm, $course);
-            $attemptobj->handle_if_time_expired($timenow, false);
-        } catch (moodle_exception $e) {
-            mtrace("Error while processing attempt {$attemptid}:");
-            mtrace_exception($e);
-
-            // Close down any currently open transactions, otherwise one error
-            // will stop following DB changes from being committed.
-            $DB->force_transaction_rollback();
+        // Recheck the latest attempt state and user-specific timing data before processing.
+        $attempt = $this->get_attempt_to_process($attemptid, $processto);
+        if (!$attempt) {
+            return;
         }
+
+        $quiz = $DB->get_record('quiz', ['id' => $attempt->quiz], '*', IGNORE_MISSING);
+        if (!$quiz) {
+            $this->set_attempts_available(0);
+            throw new coding_exception("Cannot process overdue attempt {$attemptid}: quiz {$attempt->quiz} not found.");
+        }
+
+        $cm = get_coursemodule_from_instance('quiz', (int)$attempt->quiz, (int)$quiz->course, false, IGNORE_MISSING);
+        if (!$cm) {
+            $this->set_attempts_available(0);
+            $message = "Cannot process overdue attempt {$attemptid}: " .
+                "course module for quiz {$attempt->quiz} not found.";
+            throw new coding_exception($message);
+        }
+
+        $course = $DB->get_record('course', ['id' => $quiz->course], '*', IGNORE_MISSING);
+        if (!$course) {
+            $this->set_attempts_available(0);
+            throw new coding_exception("Cannot process overdue attempt {$attemptid}: course {$quiz->course} not found.");
+        }
+
+        $quizforuser = clone($quiz);
+        $quizforuser->timeclose = $attempt->usertimeclose;
+        $quizforuser->timelimit = $attempt->usertimelimit;
+
+        $attemptobj = new quiz_attempt($attempt, $quizforuser, $cm, $course);
+        $attemptobj->handle_if_time_expired($timenow, false);
     }
 
     /**
