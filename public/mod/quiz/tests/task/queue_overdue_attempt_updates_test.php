@@ -77,7 +77,7 @@ final class queue_overdue_attempt_updates_test extends advanced_testcase {
     }
 
     /**
-     * The task should continue scanning until it queues the configured number of new tasks.
+     * The task should count only newly queued tasks towards the configured limit.
      */
     public function test_execute_counts_successfully_queued_tasks_towards_limit(): void {
         global $DB;
@@ -99,6 +99,7 @@ final class queue_overdue_attempt_updates_test extends advanced_testcase {
         $attempt1 = $this->create_overdue_attempt($quiz, $user->id, 1, $timenow - 300);
         $attempt2 = $this->create_overdue_attempt($quiz, $user->id, 2, $timenow - 200);
         $attempt3 = $this->create_overdue_attempt($quiz, $user->id, 3, $timenow - 100);
+        $attempt4 = $this->create_overdue_attempt($quiz, $user->id, 4, $timenow - 50);
 
         // Pre-queue the first attempt to simulate an already queued task at the front of the backlog.
         $task = new update_overdue_attempt();
@@ -129,6 +130,7 @@ final class queue_overdue_attempt_updates_test extends advanced_testcase {
         $this->assertContains($attempt1, $queuedattemptids);
         $this->assertContains($attempt2, $queuedattemptids);
         $this->assertContains($attempt3, $queuedattemptids);
+        $this->assertNotContains($attempt4, $queuedattemptids);
     }
 
     /**
