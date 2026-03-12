@@ -100,6 +100,9 @@ final class queue_overdue_attempt_updates_test extends advanced_testcase {
         $attempt2 = $this->create_overdue_attempt($quiz, $user->id, 2, $timenow - 200);
         $attempt3 = $this->create_overdue_attempt($quiz, $user->id, 3, $timenow - 100);
         $attempt4 = $this->create_overdue_attempt($quiz, $user->id, 4, $timenow - 50);
+        $notdueattempt = $this->create_overdue_attempt($quiz, $user->id, 5, $timenow + 300);
+        $finishedattempt = $this->create_overdue_attempt($quiz, $user->id, 6, $timenow - 400);
+        $DB->set_field('quiz_attempts', 'state', quiz_attempt::FINISHED, ['id' => $finishedattempt]);
 
         // Pre-queue the first attempt to simulate an already queued task at the front of the backlog.
         $task = new update_overdue_attempt();
@@ -131,6 +134,8 @@ final class queue_overdue_attempt_updates_test extends advanced_testcase {
         $this->assertContains($attempt2, $queuedattemptids);
         $this->assertContains($attempt3, $queuedattemptids);
         $this->assertNotContains($attempt4, $queuedattemptids);
+        $this->assertNotContains($notdueattempt, $queuedattemptids);
+        $this->assertNotContains($finishedattempt, $queuedattemptids);
     }
 
     /**
@@ -156,6 +161,9 @@ final class queue_overdue_attempt_updates_test extends advanced_testcase {
         $latest = $this->create_overdue_attempt($quiz, $user->id, 1, $timenow - 100);
         $oldest = $this->create_overdue_attempt($quiz, $user->id, 2, $timenow - 300);
         $middle = $this->create_overdue_attempt($quiz, $user->id, 3, $timenow - 200);
+        $finishedold = $this->create_overdue_attempt($quiz, $user->id, 4, $timenow - 400);
+        $notdue = $this->create_overdue_attempt($quiz, $user->id, 5, $timenow + 300);
+        $DB->set_field('quiz_attempts', 'state', quiz_attempt::FINISHED, ['id' => $finishedold]);
 
         $task = new queue_overdue_attempt_updates();
         ob_start();
@@ -178,6 +186,8 @@ final class queue_overdue_attempt_updates_test extends advanced_testcase {
         }
 
         $this->assertEquals([$oldest, $middle], $queuedattemptids);
+        $this->assertNotContains($finishedold, $queuedattemptids);
         $this->assertNotContains($latest, $queuedattemptids);
+        $this->assertNotContains($notdue, $queuedattemptids);
     }
 }
