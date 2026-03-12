@@ -418,6 +418,7 @@ final class attempts_test extends \advanced_testcase {
         //
 
         [$count, $quizcount] = $overduehander->update_all_overdue_attempts(1000, 940);
+        $this->assertDebuggingCalledCount(3);
 
         $attempts = $DB->get_records('quiz_attempts', null, 'quiz, userid, attempt',
                 'id, quiz, userid, attempt, state, timestart, timefinish, timecheckstate');
@@ -764,6 +765,7 @@ final class attempts_test extends \advanced_testcase {
 
         $timenow = $overdueattempt->timestart + 100;
         $overduetask->update_all_overdue_attempts($timenow, 0);
+        $this->assertDebuggingCalled();
 
         $latestfinishedattempt = $DB->get_record('quiz_attempts', ['id' => $finishedattemptid]);
         $this->assertEquals($finishedtime, $latestfinishedattempt->timefinish);
