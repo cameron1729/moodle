@@ -91,17 +91,18 @@ final class queue_overdue_attempt_updates_test extends advanced_testcase {
         $course = $this->getDataGenerator()->create_course();
         $user = $this->getDataGenerator()->create_user();
         $this->getDataGenerator()->enrol_user($user->id, $course->id, 'student');
+        $userid = (int)$user->id;
 
         $quizgenerator = $this->getDataGenerator()->get_plugin_generator('mod_quiz');
         $quiz = $quizgenerator->create_instance(['course' => $course->id]);
 
         $timenow = time();
-        $attempt1 = $this->create_overdue_attempt($quiz, $user->id, 1, $timenow - 300);
-        $attempt2 = $this->create_overdue_attempt($quiz, $user->id, 2, $timenow - 200);
-        $attempt3 = $this->create_overdue_attempt($quiz, $user->id, 3, $timenow - 100);
-        $attempt4 = $this->create_overdue_attempt($quiz, $user->id, 4, $timenow - 50);
-        $notdueattempt = $this->create_overdue_attempt($quiz, $user->id, 5, $timenow + 300);
-        $finishedattempt = $this->create_overdue_attempt($quiz, $user->id, 6, $timenow - 400);
+        $attempt1 = $this->create_overdue_attempt($quiz, $userid, 1, $timenow - 300);
+        $attempt2 = $this->create_overdue_attempt($quiz, $userid, 2, $timenow - 200);
+        $attempt3 = $this->create_overdue_attempt($quiz, $userid, 3, $timenow - 100);
+        $attempt4 = $this->create_overdue_attempt($quiz, $userid, 4, $timenow - 50);
+        $notdueattempt = $this->create_overdue_attempt($quiz, $userid, 5, $timenow + 300);
+        $finishedattempt = $this->create_overdue_attempt($quiz, $userid, 6, $timenow - 400);
         $DB->set_field('quiz_attempts', 'state', quiz_attempt::FINISHED, ['id' => $finishedattempt]);
 
         // Pre-queue the first attempt to simulate an already queued task at the front of the backlog.
@@ -152,16 +153,17 @@ final class queue_overdue_attempt_updates_test extends advanced_testcase {
         $course = $this->getDataGenerator()->create_course();
         $user = $this->getDataGenerator()->create_user();
         $this->getDataGenerator()->enrol_user($user->id, $course->id, 'student');
+        $userid = (int)$user->id;
 
         $quizgenerator = $this->getDataGenerator()->get_plugin_generator('mod_quiz');
         $quiz = $quizgenerator->create_instance(['course' => $course->id]);
 
         $timenow = time();
-        $latest = $this->create_overdue_attempt($quiz, $user->id, 1, $timenow - 100);
-        $oldest = $this->create_overdue_attempt($quiz, $user->id, 2, $timenow - 300);
-        $middle = $this->create_overdue_attempt($quiz, $user->id, 3, $timenow - 200);
-        $finishedold = $this->create_overdue_attempt($quiz, $user->id, 4, $timenow - 400);
-        $notdue = $this->create_overdue_attempt($quiz, $user->id, 5, $timenow + 300);
+        $latest = $this->create_overdue_attempt($quiz, $userid, 1, $timenow - 100);
+        $oldest = $this->create_overdue_attempt($quiz, $userid, 2, $timenow - 300);
+        $middle = $this->create_overdue_attempt($quiz, $userid, 3, $timenow - 200);
+        $finishedold = $this->create_overdue_attempt($quiz, $userid, 4, $timenow - 400);
+        $notdue = $this->create_overdue_attempt($quiz, $userid, 5, $timenow + 300);
         $DB->set_field('quiz_attempts', 'state', quiz_attempt::FINISHED, ['id' => $finishedold]);
 
         $task = new queue_overdue_attempt_updates();
