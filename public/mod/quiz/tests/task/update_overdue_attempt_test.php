@@ -19,6 +19,7 @@ declare(strict_types=1);
 namespace mod_quiz\task;
 
 use advanced_testcase;
+use coding_exception;
 use mod_quiz\quiz_attempt;
 use mod_quiz\quiz_settings;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -119,5 +120,81 @@ final class update_overdue_attempt_test extends advanced_testcase {
         $this->assertEquals(quiz_attempt::IN_PROGRESS, $attempt->state);
         $this->assertEquals(0, (int)$attempt->timefinish);
         $this->assertGreaterThan(time(), (int)$attempt->timecheckstate);
+    }
+
+    /**
+     * Invalid custom task data should fail without retries.
+     */
+    public function test_execute_fails_for_invalid_attemptid(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $task = new update_overdue_attempt();
+        $task->set_custom_data((object)['attemptid' => 'not-an-int']);
+
+        try {
+            $task->execute();
+            $this->fail('Expected coding_exception for invalid attemptid custom data.');
+        } catch (coding_exception $e) {
+            $this->assertStringContainsString('requires a valid attemptid', $e->getMessage());
+            $this->assertEquals(0, $task->get_attempts_available());
+        }
+    }
+
+    /**
+     * An attempt referencing a missing quiz should fail without retries.
+     */
+    public function test_execute_fails_for_missing_quiz(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        set_config('graceperiodmin', 0, 'quiz');
+
+        $attemptid = $this->create_due_attempt();
+        $DB->set_field('quiz_attempts', 'quiz', 99999999, ['id' => $attemptid]);
+
+        $task = new update_overdue_attempt();
+        $task->set_custom_data((object)['attemptid' => $attemptid]);
+
+        try {
+            $task->execute();
+            $this->fail('Expected coding_exception for missing quiz.');
+        } catch (coding_exception $e) {
+            $this->assertStringContainsString('quiz', $e->getMessage());
+            $this->assertStringContainsString('not found', $e->getMessage());
+            $this->assertEquals(0, $task->get_attempts_available());
+        }
+    }
+
+    /**
+     * An attempt with a quiz pointing to a missing course should fail without retries.
+     */
+    public function test_execute_fails_for_missing_course(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        set_config('graceperiodmin', 0, 'quiz');
+
+        $attemptid = $this->create_due_attempt();
+        $attempt = $DB->get_record('quiz_attempts', ['id' => $attemptid], '*', MUST_EXIST);
+        $cm = get_coursemodule_from_instance('quiz', (int)$attempt->quiz, 0, false, MUST_EXIST);
+
+        $invalidcourseid = 99999999;
+        $DB->set_field('quiz', 'course', $invalidcourseid, ['id' => $attempt->quiz]);
+        $DB->set_field('course_modules', 'course', $invalidcourseid, ['id' => $cm->id]);
+
+        $task = new update_overdue_attempt();
+        $task->set_custom_data((object)['attemptid' => $attemptid]);
+
+        try {
+            $task->execute();
+            $this->fail('Expected coding_exception for missing course.');
+        } catch (coding_exception $e) {
+            $this->assertStringContainsString('course', $e->getMessage());
+            $this->assertStringContainsString('not found', $e->getMessage());
+            $this->assertEquals(0, $task->get_attempts_available());
+        }
     }
 }
