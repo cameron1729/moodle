@@ -44,6 +44,7 @@ class queue_overdue_attempt_updates extends scheduled_task {
         $maxattemptstoqueue = (int)get_config('quiz', 'overdueattemptsmaxqueueperrun');
         $queuedcount = 0;
         $scannedcount = 0;
+        $existingtasks = $this->get_existing_update_tasks();
 
         mtrace('  Looking for overdue quiz attempts to queue...');
 
@@ -60,10 +61,17 @@ class queue_overdue_attempt_updates extends scheduled_task {
                 $scannedcount++;
 
                 $task = new update_overdue_attempt();
-                $task->set_custom_data((object)['attemptid' => (int)$attempt->id]);
+                $attemptid = (int)$attempt->id;
+                $task->set_custom_data((object)['attemptid' => $attemptid]);
+                $wasqueued = isset($existingtasks[$attemptid]) && !$existingtasks[$attemptid]['exhausted'];
 
-                if (manager::queue_adhoc_task($task, true)) {
+                // When MDL-86422 lands, queue_adhoc_task(..., true) returns an existing task id for
+                // duplicates instead of false. Combined with the snapshot above, !== false keeps this
+                // branch working under both semantics and only counts tasks that were newly queued or
+                // revived during this run.
+                if (manager::queue_adhoc_task($task, true) !== false && !$wasqueued) {
                     $queuedcount++;
+                    $existingtasks[$attemptid] = ['exhausted' => false];
                     if ($queuedcount >= $maxattemptstoqueue) {
                         break;
                     }
@@ -74,5 +82,38 @@ class queue_overdue_attempt_updates extends scheduled_task {
         }
 
         mtrace("  Queued {$queuedcount} overdue attempt update tasks after scanning {$scannedcount} attempts.");
+    }
+
+    /**
+     * Get currently queued overdue attempt update tasks keyed by attempt id.
+     *
+     * @return array Quiz attempt ids keyed to the queued task's attemptsavailable value.
+     *               A value of 0 means the queued task is exhausted.
+     */
+    private function get_existing_update_tasks(): array {
+        global $DB;
+
+        $classname = manager::get_canonical_class_name(update_overdue_attempt::class);
+        $records = $DB->get_records(
+            'task_adhoc',
+            ['classname' => $classname],
+            '',
+            'id, customdata, attemptsavailable',
+        );
+
+        $tasks = [];
+        foreach ($records as $record) {
+            $customdata = json_decode($record->customdata);
+            $attemptid = isset($customdata->attemptid) ? (int)$customdata->attemptid : 0;
+            if ($attemptid <= 0) {
+                continue;
+            }
+
+            $tasks[$attemptid] = [
+                'exhausted' => ((int)$record->attemptsavailable === 0),
+            ];
+        }
+
+        return $tasks;
     }
 }
