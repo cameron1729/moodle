@@ -30,6 +30,11 @@ use core\task\scheduled_task;
  * @license   https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class queue_overdue_attempt_updates extends scheduled_task {
+    /**
+     * Maximum number of attempts to scan per run, as a multiple of queue limit.
+     */
+    private const SCAN_LIMIT_FACTOR = 5;
+
     #[\Override]
     public function get_name(): string {
         return get_string('queueoverdueattemptupdatestask', 'mod_quiz');
@@ -42,8 +47,10 @@ class queue_overdue_attempt_updates extends scheduled_task {
         $timenow = time();
         $processto = $timenow - (int)get_config('quiz', 'graceperiodmin');
         $maxattemptstoqueue = (int)get_config('quiz', 'overdueattemptsmaxqueueperrun');
+        $maxattemptstoscan = max($maxattemptstoqueue * self::SCAN_LIMIT_FACTOR, $maxattemptstoqueue);
         $queuedcount = 0;
         $scannedcount = 0;
+        $scanlimitreached = false;
         $existingtasks = $this->get_existing_update_tasks();
 
         mtrace('  Looking for overdue quiz attempts to queue...');
@@ -58,12 +65,17 @@ class queue_overdue_attempt_updates extends scheduled_task {
 
         try {
             foreach ($attemptstoprocess as $attempt) {
+                if ($scannedcount >= $maxattemptstoscan) {
+                    $scanlimitreached = true;
+                    break;
+                }
                 $scannedcount++;
 
                 $task = new update_overdue_attempt();
                 $attemptid = (int)$attempt->id;
                 $task->set_custom_data((object)['attemptid' => $attemptid]);
                 $wasqueued = isset($existingtasks[$attemptid]) && !$existingtasks[$attemptid]['exhausted'];
+                $wasexhausted = isset($existingtasks[$attemptid]) && $existingtasks[$attemptid]['exhausted'];
 
                 // When MDL-86422 lands, queue_adhoc_task(..., true) returns an existing task id for
                 // duplicates instead of false. Combined with the snapshot above, !== false keeps this
@@ -72,6 +84,13 @@ class queue_overdue_attempt_updates extends scheduled_task {
                 if (manager::queue_adhoc_task($task, true) !== false && !$wasqueued) {
                     $queuedcount++;
                     $existingtasks[$attemptid] = ['exhausted' => false];
+
+                    if ($wasexhausted) {
+                        mtrace("  Re-queued exhausted update_overdue_attempt for attempt {$attemptid}");
+                    } else {
+                        mtrace("  Queued update_overdue_attempt for attempt {$attemptid}");
+                    }
+
                     if ($queuedcount >= $maxattemptstoqueue) {
                         break;
                     }
@@ -79,6 +98,10 @@ class queue_overdue_attempt_updates extends scheduled_task {
             }
         } finally {
             $attemptstoprocess->close();
+        }
+
+        if ($scanlimitreached) {
+            mtrace("  Reached scan limit ({$maxattemptstoscan}) before queue limit ({$maxattemptstoqueue}).");
         }
 
         mtrace("  Queued {$queuedcount} overdue attempt update tasks after scanning {$scannedcount} attempts.");

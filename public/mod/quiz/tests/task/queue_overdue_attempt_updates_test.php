@@ -111,7 +111,11 @@ final class queue_overdue_attempt_updates_test extends advanced_testcase {
         manager::queue_adhoc_task($task, true);
 
         $task = new queue_overdue_attempt_updates();
-        $this->expectOutputRegex('/Queued 2 overdue attempt update tasks after scanning 3 attempts\./');
+        $this->expectOutputRegex(
+            '/Queued update_overdue_attempt for attempt ' . $attempt2 .
+            '.*Queued update_overdue_attempt for attempt ' . $attempt3 .
+            '.*Queued 2 overdue attempt update tasks after scanning 3 attempts\./s',
+        );
         $task->execute();
 
         $classname = manager::get_canonical_class_name(update_overdue_attempt::class);
@@ -167,7 +171,11 @@ final class queue_overdue_attempt_updates_test extends advanced_testcase {
         $DB->set_field('quiz_attempts', 'state', quiz_attempt::FINISHED, ['id' => $finishedold]);
 
         $task = new queue_overdue_attempt_updates();
-        $this->expectOutputRegex('/Queued 2 overdue attempt update tasks after scanning 2 attempts\./');
+        $this->expectOutputRegex(
+            '/Queued update_overdue_attempt for attempt ' . $oldest .
+            '.*Queued update_overdue_attempt for attempt ' . $middle .
+            '.*Queued 2 overdue attempt update tasks after scanning 2 attempts\./s',
+        );
         $task->execute();
 
         $classname = manager::get_canonical_class_name(update_overdue_attempt::class);
@@ -189,5 +197,49 @@ final class queue_overdue_attempt_updates_test extends advanced_testcase {
         $this->assertNotContains($finishedold, $queuedattemptids);
         $this->assertNotContains($latest, $queuedattemptids);
         $this->assertNotContains($notdue, $queuedattemptids);
+    }
+
+    /**
+     * Test that the scheduled task stops scanning once the scan limit is reached.
+     */
+    public function test_execute_respects_scan_limit(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        set_config('graceperiodmin', 0, 'quiz');
+        set_config('overdueattemptsmaxqueueperrun', 2, 'quiz');
+
+        $course = $this->getDataGenerator()->create_course();
+        $user = $this->getDataGenerator()->create_user();
+        $this->getDataGenerator()->enrol_user($user->id, $course->id, 'student');
+        $userid = (int)$user->id;
+
+        $quizgenerator = $this->getDataGenerator()->get_plugin_generator('mod_quiz');
+        $quiz = $quizgenerator->create_instance(['course' => $course->id]);
+
+        $attemptids = [];
+        $timenow = time();
+        for ($i = 1; $i <= 12; $i++) {
+            $attemptids[] = $this->create_overdue_attempt($quiz, $userid, $i, $timenow - (300 - $i));
+        }
+
+        foreach ($attemptids as $attemptid) {
+            $task = new update_overdue_attempt();
+            $task->set_custom_data((object)['attemptid' => $attemptid]);
+            manager::queue_adhoc_task($task, true);
+        }
+
+        $task = new queue_overdue_attempt_updates();
+        $this->expectOutputRegex(
+            '/Reached scan limit \\(10\\) before queue limit \\(2\\)' .
+            '.*Queued 0 overdue attempt update tasks after scanning 10 attempts\\./s',
+        );
+        $task->execute();
+
+        $classname = manager::get_canonical_class_name(update_overdue_attempt::class);
+        $records = $DB->get_records('task_adhoc', ['classname' => $classname], 'id ASC', 'id, customdata');
+        $this->assertCount(12, $records);
     }
 }
