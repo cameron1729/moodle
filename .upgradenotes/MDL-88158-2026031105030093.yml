@@ -4,5 +4,7 @@ notes:
     - message: >-
         The update_overdue_attempts task now queues one adhoc worker task
         (update_overdue_attempts_worker) per due attempt instead of processing
-        all overdue attempts inline.
+        all overdue attempts inline. The new overdueattemptsmaxruntime setting
+        controls how long each scheduled run spends queueing work (0 means
+        unlimited).
       type: improved

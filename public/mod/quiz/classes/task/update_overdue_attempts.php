@@ -44,6 +44,9 @@ require_once($CFG->dirroot . '/mod/quiz/locallib.php');
  *
  */
 class update_overdue_attempts extends \core\task\scheduled_task {
+    /** @var int Time in seconds to defer rechecking an attempt after queueing. */
+    private const EXPIRY_DURATION_SECONDS = 300;
+
     public function get_name(): string {
         return get_string('updateoverdueattemptstask', 'mod_quiz');
     }
@@ -56,8 +59,13 @@ class update_overdue_attempts extends \core\task\scheduled_task {
 
         $timenow = time();
         $processto = $timenow - (int)get_config('quiz', 'graceperiodmin');
+        $maxruntime = (int)get_config('quiz', 'overdueattemptsmaxruntime');
+        $starttime = microtime(true);
+        $expirytime = $timenow + self::EXPIRY_DURATION_SECONDS;
         $queuedcount = 0;
         $scannedcount = 0;
+        $runtimelimitreached = false;
+        $existingtasks = $this->get_existing_update_tasks();
 
         mtrace('  Looking for overdue quiz attempts to queue...');
 
@@ -71,22 +79,114 @@ class update_overdue_attempts extends \core\task\scheduled_task {
 
         try {
             foreach ($attemptstoprocess as $attempt) {
+                if ($this->runtime_limit_reached($starttime, $maxruntime)) {
+                    $runtimelimitreached = true;
+                    break;
+                }
+
                 $scannedcount++;
 
                 $attemptid = (int)$attempt->id;
+                $wasqueued = isset($existingtasks[$attemptid]) && !$existingtasks[$attemptid]['exhausted'];
+                $wasexhausted = isset($existingtasks[$attemptid]) && $existingtasks[$attemptid]['exhausted'];
+
+                if ($wasqueued) {
+                    $this->defer_attempt_recheck($attemptid, $expirytime);
+                    continue;
+                }
+
                 $task = new update_overdue_attempts_worker();
                 $task->set_custom_data((object)['attemptid' => $attemptid]);
 
                 if (manager::queue_adhoc_task($task, true) !== false) {
                     $queuedcount++;
-                    mtrace("  Queued update_overdue_attempts_worker for attempt {$attemptid}");
+                    $existingtasks[$attemptid] = ['exhausted' => false];
+                    $this->defer_attempt_recheck($attemptid, $expirytime);
+
+                    if ($wasexhausted) {
+                        mtrace("  Re-queued exhausted update_overdue_attempts_worker for attempt {$attemptid}");
+                    } else {
+                        mtrace("  Queued update_overdue_attempts_worker for attempt {$attemptid}");
+                    }
+                } else {
+                    // Another process may have queued this in parallel.
+                    $existingtasks[$attemptid] = ['exhausted' => false];
+                    $this->defer_attempt_recheck($attemptid, $expirytime);
                 }
             }
         } finally {
             $attemptstoprocess->close();
         }
 
+        if ($runtimelimitreached && $maxruntime > 0) {
+            mtrace("  Reached runtime limit ({$maxruntime}s).");
+        }
+
         mtrace("  Queued {$queuedcount} overdue attempt update tasks after scanning {$scannedcount} attempts.");
+    }
+
+    /**
+     * Check whether the configured time limit has been reached.
+     *
+     * @param float $starttime Execution start timestamp from microtime(true).
+     * @param int $maxruntime Configured time limit in seconds. 0 means unlimited.
+     * @return bool True when execution should stop queueing.
+     */
+    protected function runtime_limit_reached(float $starttime, int $maxruntime): bool {
+        if ($maxruntime <= 0) {
+            return false;
+        }
+
+        return (microtime(true) - $starttime) >= $maxruntime;
+    }
+
+    /**
+     * Get currently queued overdue attempt update tasks keyed by attempt ID.
+     *
+     * @return array Quiz attempt IDs keyed to an array containing an exhausted flag.
+     */
+    private function get_existing_update_tasks(): array {
+        $records = manager::get_adhoc_tasks(update_overdue_attempts_worker::class);
+
+        $tasks = [];
+        foreach ($records as $record) {
+            $customdata = $record->get_custom_data();
+            $attemptid = isset($customdata->attemptid) ? (int)$customdata->attemptid : 0;
+            if ($attemptid <= 0) {
+                continue;
+            }
+
+            $tasks[$attemptid] = [
+                'exhausted' => ($record->get_attempts_available() === 0),
+            ];
+        }
+
+        return $tasks;
+    }
+
+    /**
+     * Move an attempt's timecheckstate forward to defer immediate rechecks while work is pending.
+     *
+     * @param int $attemptid Quiz attempt ID.
+     * @param int $expirytime Unix timestamp to defer rechecks until.
+     */
+    private function defer_attempt_recheck(int $attemptid, int $expirytime): void {
+        global $DB;
+
+        $sql = "UPDATE {quiz_attempts}
+                   SET timecheckstate = :expirytimeset
+                 WHERE id = :attemptid
+                   AND state IN ('inprogress', 'overdue')
+                   AND timecheckstate IS NOT NULL
+                   AND timecheckstate < :expirytimecmp";
+
+        $params = [
+            'expirytimeset' => $expirytime,
+            'expirytimecmp' => $expirytime,
+            'attemptid' => $attemptid,
+        ];
+
+        $DB->execute($sql, $params);
     }
 
     /**

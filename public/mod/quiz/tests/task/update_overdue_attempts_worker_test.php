@@ -92,10 +92,47 @@ final class update_overdue_attempts_worker_test extends advanced_testcase {
 
         $task = new update_overdue_attempts_worker();
         $task->set_custom_data((object)['attemptid' => $attemptid]);
+        $this->expectOutputRegex(
+            '/Processing update_overdue_attempts_worker for attempt ' . $attemptid .
+            '\..*Processed overdue attempt ' . $attemptid .
+            ': state inprogress -> (submitted|finished),/s',
+        );
         $task->execute();
 
         $attempt = $DB->get_record('quiz_attempts', ['id' => $attemptid], '*', MUST_EXIST);
         $this->assertGreaterThan(0, $attempt->timefinish);
+        $this->assertNull($attempt->timecheckstate);
+    }
+
+    /**
+     * The task should process a genuinely overdue attempt even when timecheckstate is deferred.
+     */
+    public function test_execute_processes_due_attempt_with_deferred_timecheckstate(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        set_config('graceperiodmin', 0, 'quiz');
+
+        $attemptid = $this->create_due_attempt();
+
+        $DB->update_record('quiz_attempts', (object)[
+            'id' => $attemptid,
+            'timecheckstate' => time() + HOURSECS,
+        ]);
+
+        $task = new update_overdue_attempts_worker();
+        $task->set_custom_data((object)['attemptid' => $attemptid]);
+        $this->expectOutputRegex(
+            '/Processing update_overdue_attempts_worker for attempt ' . $attemptid .
+            '\..*Processed overdue attempt ' . $attemptid .
+            ': state inprogress -> (submitted|finished),/s',
+        );
+        $task->execute();
+
+        $attempt = $DB->get_record('quiz_attempts', ['id' => $attemptid], '*', MUST_EXIST);
+        $this->assertGreaterThan(0, $attempt->timefinish);
+        $this->assertContains($attempt->state, [quiz_attempt::SUBMITTED, quiz_attempt::FINISHED]);
         $this->assertNull($attempt->timecheckstate);
     }
 
@@ -117,6 +154,11 @@ final class update_overdue_attempts_worker_test extends advanced_testcase {
 
         $task = new update_overdue_attempts_worker();
         $task->set_custom_data((object)['attemptid' => $attemptid]);
+        $this->expectOutputRegex(
+            '/Processing update_overdue_attempts_worker for attempt ' . $attemptid .
+            '\..*Processed overdue attempt ' . $attemptid .
+            ': state inprogress -> inprogress,/s',
+        );
         $task->execute();
 
         $attempt = $DB->get_record('quiz_attempts', ['id' => $attemptid], '*', MUST_EXIST);
@@ -134,6 +176,7 @@ final class update_overdue_attempts_worker_test extends advanced_testcase {
 
         $task = new update_overdue_attempts_worker();
         $task->set_custom_data((object)['attemptid' => 'not-an-int']);
+        $this->expectOutputRegex('/Cannot process overdue attempt task: missing or invalid attemptid\./');
 
         try {
             $task->execute();
@@ -159,6 +202,10 @@ final class update_overdue_attempts_worker_test extends advanced_testcase {
 
         $task = new update_overdue_attempts_worker();
         $task->set_custom_data((object)['attemptid' => $attemptid]);
+        $this->expectOutputRegex(
+            '/Processing update_overdue_attempts_worker for attempt ' . $attemptid .
+            '\..*Cannot process overdue attempt ' . $attemptid . ': quiz 99999999 not found\./s',
+        );
         try {
             $task->execute();
             $this->fail('Expected coding_exception for missing quiz.');
@@ -189,6 +236,10 @@ final class update_overdue_attempts_worker_test extends advanced_testcase {
 
         $task = new update_overdue_attempts_worker();
         $task->set_custom_data((object)['attemptid' => $attemptid]);
+        $this->expectOutputRegex(
+            '/Processing update_overdue_attempts_worker for attempt ' . $attemptid .
+            '\..*Cannot process overdue attempt ' . $attemptid . ': course 99999999 not found\./s',
+        );
 
         try {
             $task->execute();

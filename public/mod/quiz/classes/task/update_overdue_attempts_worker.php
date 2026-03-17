@@ -47,28 +47,35 @@ class update_overdue_attempts_worker extends adhoc_task {
 
         $data = $this->get_custom_data();
         $attemptid = filter_var($data->attemptid ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-        $timenow = time();
-        $processto = $timenow - (int)get_config('quiz', 'graceperiodmin');
 
         if ($attemptid === false) {
+            mtrace('Cannot process overdue attempt task: missing or invalid attemptid.');
             $this->set_attempts_available(0);
             throw new coding_exception(__METHOD__ . ' requires a valid attemptid in customdata.');
         }
+        $attemptid = (int)$attemptid;
+
+        mtrace("Processing update_overdue_attempts_worker for attempt {$attemptid}.");
 
         // Recheck the latest attempt state and user specific timing data before processing.
-        $attempt = $this->get_attempt_to_process($attemptid, $processto);
+        $attempt = $this->get_attempt_to_process($attemptid);
         if (!$attempt) {
+            mtrace("Skipping overdue attempt {$attemptid}: attempt not found or no longer in inprogress/overdue state.");
             return;
         }
 
+        $timenow = time();
+
         $quiz = $DB->get_record('quiz', ['id' => $attempt->quiz], '*', IGNORE_MISSING);
         if (!$quiz) {
+            mtrace("Cannot process overdue attempt {$attemptid}: quiz {$attempt->quiz} not found.");
             $this->set_attempts_available(0);
             throw new coding_exception("Cannot process overdue attempt {$attemptid}: quiz {$attempt->quiz} not found.");
         }
 
         $cm = get_coursemodule_from_instance('quiz', (int)$attempt->quiz, (int)$quiz->course, false, IGNORE_MISSING);
         if (!$cm) {
+            mtrace("Cannot process overdue attempt {$attemptid}: course module for quiz {$attempt->quiz} not found.");
             $this->set_attempts_available(0);
             $message = "Cannot process overdue attempt {$attemptid}: " .
                 "course module for quiz {$attempt->quiz} not found.";
@@ -77,12 +84,14 @@ class update_overdue_attempts_worker extends adhoc_task {
 
         $course = $DB->get_record('course', ['id' => $quiz->course], '*', IGNORE_MISSING);
         if (!$course) {
+            mtrace("Cannot process overdue attempt {$attemptid}: course {$quiz->course} not found.");
             $this->set_attempts_available(0);
             throw new coding_exception("Cannot process overdue attempt {$attemptid}: course {$quiz->course} not found.");
         }
 
         $attempttiming = $this->get_attempt_timing($attemptid);
         if (!$attempttiming) {
+            mtrace("Cannot process overdue attempt {$attemptid}: user timing data not found.");
             $this->set_attempts_available(0);
             throw new coding_exception("Cannot process overdue attempt {$attemptid}: user timing data not found.");
         }
@@ -92,28 +101,33 @@ class update_overdue_attempts_worker extends adhoc_task {
         $quizforuser->timelimit = $attempttiming->usertimelimit;
 
         $attemptobj = new quiz_attempt($attempt, $quizforuser, $cm, $course);
+        $beforeattempt = clone($attemptobj->get_attempt());
         $attemptobj->handle_if_time_expired($timenow, false);
+        $afterattempt = $attemptobj->get_attempt();
+
+        $beforetimecheckstate = is_null($beforeattempt->timecheckstate) ? 'null' : (string)$beforeattempt->timecheckstate;
+        $aftertimecheckstate = is_null($afterattempt->timecheckstate) ? 'null' : (string)$afterattempt->timecheckstate;
+        mtrace("Processed overdue attempt {$attemptid}: state {$beforeattempt->state} -> {$afterattempt->state}, " .
+            "timefinish {$beforeattempt->timefinish} -> {$afterattempt->timefinish}, " .
+            "timecheckstate {$beforetimecheckstate} -> {$aftertimecheckstate}.");
     }
 
     /**
      * Get the attempt if it still requires overdue handling.
      *
      * @param int $attemptid Quiz attempt ID.
-     * @param int $processto Timestamp to process up to.
      * @return stdClass|null Attempt record if it still requires overdue handling.
      */
-    private function get_attempt_to_process(int $attemptid, int $processto): ?stdClass {
+    private function get_attempt_to_process(int $attemptid): ?stdClass {
         global $DB;
 
         $sql = "SELECT quiza.*
                   FROM {quiz_attempts} quiza
                  WHERE quiza.id = :attemptid
-                   AND quiza.state IN ('inprogress', 'overdue')
-                   AND quiza.timecheckstate <= :processto";
+                   AND quiza.state IN ('inprogress', 'overdue')";
 
         $params = [
             'attemptid' => $attemptid,
-            'processto' => $processto,
         ];
 
         return $DB->get_record_sql($sql, $params) ?: null;

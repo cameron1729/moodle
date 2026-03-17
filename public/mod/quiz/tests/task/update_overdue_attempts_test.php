@@ -86,6 +86,7 @@ final class update_overdue_attempts_test extends advanced_testcase {
         $this->setAdminUser();
 
         set_config('graceperiodmin', 0, 'quiz');
+        set_config('overdueattemptsmaxruntime', 0, 'quiz');
 
         $course = $this->getDataGenerator()->create_course();
         $user = $this->getDataGenerator()->create_user();
@@ -157,6 +158,7 @@ final class update_overdue_attempts_test extends advanced_testcase {
         $this->setAdminUser();
 
         set_config('graceperiodmin', 0, 'quiz');
+        set_config('overdueattemptsmaxruntime', 0, 'quiz');
 
         $course = $this->getDataGenerator()->create_course();
         $user = $this->getDataGenerator()->create_user();
@@ -203,4 +205,57 @@ final class update_overdue_attempts_test extends advanced_testcase {
         $this->assertNotContains($notdue, $queuedattemptids);
     }
 
+    /**
+     * The task should stop queueing once the runtime limit is reached.
+     */
+    public function test_execute_respects_runtime_limit(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        set_config('graceperiodmin', 0, 'quiz');
+        set_config('overdueattemptsmaxruntime', 1, 'quiz');
+
+        $course = $this->getDataGenerator()->create_course();
+        $user = $this->getDataGenerator()->create_user();
+        $this->getDataGenerator()->enrol_user($user->id, $course->id, 'student');
+        $userid = (int)$user->id;
+
+        $quizgenerator = $this->getDataGenerator()->get_plugin_generator('mod_quiz');
+        $quiz = $quizgenerator->create_instance(['course' => $course->id]);
+
+        $attemptids = [];
+        $timenow = time();
+        for ($i = 1; $i <= 12; $i++) {
+            $attemptids[] = $this->create_overdue_attempt($quiz, $userid, $i, $timenow - (300 - $i));
+        }
+
+        foreach ($attemptids as $attemptid) {
+            $task = new update_overdue_attempts_worker();
+            $task->set_custom_data((object)['attemptid' => $attemptid]);
+            manager::queue_adhoc_task($task, true);
+        }
+
+        $task = new class extends update_overdue_attempts {
+            /** @var int */
+            private int $runtimechecks = 0;
+
+            #[\Override]
+            protected function runtime_limit_reached(float $starttime, int $maxruntime): bool {
+                $this->runtimechecks++;
+                return $this->runtimechecks > 2;
+            }
+        };
+
+        $this->expectOutputRegex(
+            '/Reached runtime limit \(1s\)' .
+            '.*Queued 0 overdue attempt update tasks after scanning 2 attempts\./s',
+        );
+        $task->execute();
+
+        $classname = manager::get_canonical_class_name(update_overdue_attempts_worker::class);
+        $records = $DB->get_records('task_adhoc', ['classname' => $classname], 'id ASC', 'id, customdata');
+        $this->assertCount(12, $records);
+    }
 }
