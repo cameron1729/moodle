@@ -25,21 +25,24 @@ use mod_quiz\quiz_settings;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
- * Unit tests for update_overdue_attempt task.
+ * Unit tests for update_overdue_attempts_worker task.
  *
  * @package   mod_quiz
  * @copyright 2026 Monash University
  * @author    Cameron Ball <cameronball@catalyst-au.net>
  * @license   https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-#[CoversClass(update_overdue_attempt::class)]
-final class update_overdue_attempt_test extends advanced_testcase {
+#[CoversClass(update_overdue_attempts_worker::class)]
+final class update_overdue_attempts_worker_test extends advanced_testcase {
     /**
      * Create a quiz attempt that is due overdue processing.
      *
-     * @return int attempt id.
+     * @param int $timelimit Attempt time limit in seconds.
+     * @param int $timestartoffset Seconds before now for attempt start time.
+     * @param int $timecheckstateoffset Seconds before now for due check time.
+     * @return int Attempt ID.
      */
-    private function create_due_attempt(): int {
+    private function create_due_attempt(int $timelimit = 1, int $timestartoffset = 600, int $timecheckstateoffset = 120): int {
         global $DB;
 
         $course = $this->getDataGenerator()->create_course();
@@ -52,7 +55,7 @@ final class update_overdue_attempt_test extends advanced_testcase {
         $quiz = $quizgenerator->create_instance([
             'course' => $course->id,
             'overduehandling' => 'autosubmit',
-            'timelimit' => 1,
+            'timelimit' => $timelimit,
         ]);
 
         $category = $questiongenerator->create_question_category();
@@ -66,8 +69,8 @@ final class update_overdue_attempt_test extends advanced_testcase {
         $DB->update_record('quiz_attempts', (object)[
             'id' => $attempt->id,
             'state' => quiz_attempt::IN_PROGRESS,
-            'timestart' => time() - 600,
-            'timecheckstate' => time() - 120,
+            'timestart' => time() - $timestartoffset,
+            'timecheckstate' => time() - $timecheckstateoffset,
             'timefinish' => 0,
         ]);
 
@@ -87,7 +90,7 @@ final class update_overdue_attempt_test extends advanced_testcase {
 
         $attemptid = $this->create_due_attempt();
 
-        $task = new update_overdue_attempt();
+        $task = new update_overdue_attempts_worker();
         $task->set_custom_data((object)['attemptid' => $attemptid]);
         $task->execute();
 
@@ -105,14 +108,14 @@ final class update_overdue_attempt_test extends advanced_testcase {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        $attemptid = $this->create_due_attempt();
+        $attemptid = $this->create_due_attempt(3600, 10, 1);
 
         $DB->update_record('quiz_attempts', (object)[
             'id' => $attemptid,
             'timecheckstate' => time() + HOURSECS,
         ]);
 
-        $task = new update_overdue_attempt();
+        $task = new update_overdue_attempts_worker();
         $task->set_custom_data((object)['attemptid' => $attemptid]);
         $task->execute();
 
@@ -129,7 +132,7 @@ final class update_overdue_attempt_test extends advanced_testcase {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        $task = new update_overdue_attempt();
+        $task = new update_overdue_attempts_worker();
         $task->set_custom_data((object)['attemptid' => 'not-an-int']);
 
         try {
@@ -144,7 +147,7 @@ final class update_overdue_attempt_test extends advanced_testcase {
     /**
      * An attempt referencing a missing quiz should be skipped.
      */
-    public function test_execute_skips_attempt_with_missing_quiz(): void {
+    public function test_execute_fails_for_missing_quiz(): void {
         global $DB;
 
         $this->resetAfterTest();
@@ -154,14 +157,16 @@ final class update_overdue_attempt_test extends advanced_testcase {
         $attemptid = $this->create_due_attempt();
         $DB->set_field('quiz_attempts', 'quiz', 99999999, ['id' => $attemptid]);
 
-        $task = new update_overdue_attempt();
+        $task = new update_overdue_attempts_worker();
         $task->set_custom_data((object)['attemptid' => $attemptid]);
-        $task->execute();
-
-        $attempt = $DB->get_record('quiz_attempts', ['id' => $attemptid], '*', MUST_EXIST);
-        $this->assertEquals(quiz_attempt::IN_PROGRESS, $attempt->state);
-        $this->assertEquals(0, (int)$attempt->timefinish);
-        $this->assertEquals(12, $task->get_attempts_available());
+        try {
+            $task->execute();
+            $this->fail('Expected coding_exception for missing quiz.');
+        } catch (coding_exception $e) {
+            $this->assertStringContainsString('quiz', $e->getMessage());
+            $this->assertStringContainsString('not found', $e->getMessage());
+            $this->assertEquals(0, $task->get_attempts_available());
+        }
     }
 
     /**
@@ -182,7 +187,7 @@ final class update_overdue_attempt_test extends advanced_testcase {
         $DB->set_field('quiz', 'course', $invalidcourseid, ['id' => $attempt->quiz]);
         $DB->set_field('course_modules', 'course', $invalidcourseid, ['id' => $cm->id]);
 
-        $task = new update_overdue_attempt();
+        $task = new update_overdue_attempts_worker();
         $task->set_custom_data((object)['attemptid' => $attemptid]);
 
         try {

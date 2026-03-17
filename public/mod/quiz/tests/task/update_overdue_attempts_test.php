@@ -27,20 +27,20 @@ use question_engine;
 use stdClass;
 
 /**
- * Unit tests for queue_overdue_attempt_updates task.
+ * Unit tests for update_overdue_attempts task.
  *
  * @package   mod_quiz
  * @copyright 2026 Monash University
  * @author    Cameron Ball <cameronball@catalyst-au.net>
  * @license   https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-#[CoversClass(queue_overdue_attempt_updates::class)]
-final class queue_overdue_attempt_updates_test extends advanced_testcase {
+#[CoversClass(update_overdue_attempts::class)]
+final class update_overdue_attempts_test extends advanced_testcase {
     /**
      * Create a question usage for a test attempt.
      *
-     * @param stdClass $quiz quiz record.
-     * @return int question usage id.
+     * @param stdClass $quiz Quiz record.
+     * @return int Question usage ID.
      */
     private function usage_id(stdClass $quiz): int {
         $quba = question_engine::make_questions_usage_by_activity(
@@ -55,11 +55,11 @@ final class queue_overdue_attempt_updates_test extends advanced_testcase {
     /**
      * Insert an overdue attempt for testing queueing behaviour.
      *
-     * @param stdClass $quiz quiz record.
-     * @param int $userid user id.
-     * @param int $attemptnumber attempt number.
-     * @param int $timecheckstate timecheckstate value.
-     * @return int attempt id.
+     * @param stdClass $quiz Quiz record.
+     * @param int $userid User ID.
+     * @param int $attemptnumber Attempt number.
+     * @param int $timecheckstate Timecheckstate value.
+     * @return int Attempt ID.
      */
     private function create_overdue_attempt(stdClass $quiz, int $userid, int $attemptnumber, int $timecheckstate): int {
         global $DB;
@@ -77,16 +77,15 @@ final class queue_overdue_attempt_updates_test extends advanced_testcase {
     }
 
     /**
-     * The task should count only newly queued tasks towards the configured limit.
+     * The task should queue all due attempts, including those after prequeued attempts.
      */
-    public function test_execute_counts_successfully_queued_tasks_towards_limit(): void {
+    public function test_execute_queues_all_due_attempts_with_prequeued_tasks(): void {
         global $DB;
 
         $this->resetAfterTest();
         $this->setAdminUser();
 
         set_config('graceperiodmin', 0, 'quiz');
-        set_config('overdueattemptsmaxqueueperrun', 2, 'quiz');
 
         $course = $this->getDataGenerator()->create_course();
         $user = $this->getDataGenerator()->create_user();
@@ -105,16 +104,21 @@ final class queue_overdue_attempt_updates_test extends advanced_testcase {
         $finishedattempt = $this->create_overdue_attempt($quiz, $userid, 6, $timenow - 400);
         $DB->set_field('quiz_attempts', 'state', quiz_attempt::FINISHED, ['id' => $finishedattempt]);
 
-        // Pre-queue the first attempt to simulate an already queued task at the front of the backlog.
-        $task = new update_overdue_attempt();
+        // Prequeue the first attempt to simulate an already queued task at the front of the backlog.
+        $task = new update_overdue_attempts_worker();
         $task->set_custom_data((object)['attemptid' => $attempt1]);
         manager::queue_adhoc_task($task, true);
 
-        $task = new queue_overdue_attempt_updates();
-        $this->expectOutputRegex('/Queued 2 overdue attempt update tasks after scanning 3 attempts\./');
+        $task = new update_overdue_attempts();
+        $this->expectOutputRegex(
+            '/Queued update_overdue_attempts_worker for attempt ' . $attempt2 .
+            '.*Queued update_overdue_attempts_worker for attempt ' . $attempt3 .
+            '.*Queued update_overdue_attempts_worker for attempt ' . $attempt4 .
+            '.*Queued 3 overdue attempt update tasks after scanning 4 attempts\./s',
+        );
         $task->execute();
 
-        $classname = manager::get_canonical_class_name(update_overdue_attempt::class);
+        $classname = manager::get_canonical_class_name(update_overdue_attempts_worker::class);
 
         $records = $DB->get_records(
             'task_adhoc',
@@ -122,20 +126,25 @@ final class queue_overdue_attempt_updates_test extends advanced_testcase {
             'id ASC',
             'id, customdata',
         );
-        $this->assertCount(3, $records);
+        $this->assertCount(4, $records);
 
         $queuedattemptids = [];
         foreach ($records as $record) {
             $queuedattemptids[] = (int)json_decode($record->customdata)->attemptid;
         }
 
-        $this->assertCount(3, array_unique($queuedattemptids));
+        $this->assertCount(4, array_unique($queuedattemptids));
         $this->assertContains($attempt1, $queuedattemptids);
         $this->assertContains($attempt2, $queuedattemptids);
         $this->assertContains($attempt3, $queuedattemptids);
-        $this->assertNotContains($attempt4, $queuedattemptids);
+        $this->assertContains($attempt4, $queuedattemptids);
         $this->assertNotContains($notdueattempt, $queuedattemptids);
         $this->assertNotContains($finishedattempt, $queuedattemptids);
+
+        $this->assertGreaterThan(time(), (int)$DB->get_field('quiz_attempts', 'timecheckstate', ['id' => $attempt1]));
+        $this->assertGreaterThan(time(), (int)$DB->get_field('quiz_attempts', 'timecheckstate', ['id' => $attempt2]));
+        $this->assertGreaterThan(time(), (int)$DB->get_field('quiz_attempts', 'timecheckstate', ['id' => $attempt3]));
+        $this->assertGreaterThan(time(), (int)$DB->get_field('quiz_attempts', 'timecheckstate', ['id' => $attempt4]));
     }
 
     /**
@@ -148,7 +157,6 @@ final class queue_overdue_attempt_updates_test extends advanced_testcase {
         $this->setAdminUser();
 
         set_config('graceperiodmin', 0, 'quiz');
-        set_config('overdueattemptsmaxqueueperrun', 2, 'quiz');
 
         $course = $this->getDataGenerator()->create_course();
         $user = $this->getDataGenerator()->create_user();
@@ -166,11 +174,16 @@ final class queue_overdue_attempt_updates_test extends advanced_testcase {
         $notdue = $this->create_overdue_attempt($quiz, $userid, 5, $timenow + 300);
         $DB->set_field('quiz_attempts', 'state', quiz_attempt::FINISHED, ['id' => $finishedold]);
 
-        $task = new queue_overdue_attempt_updates();
-        $this->expectOutputRegex('/Queued 2 overdue attempt update tasks after scanning 2 attempts\./');
+        $task = new update_overdue_attempts();
+        $this->expectOutputRegex(
+            '/Queued update_overdue_attempts_worker for attempt ' . $oldest .
+            '.*Queued update_overdue_attempts_worker for attempt ' . $middle .
+            '.*Queued update_overdue_attempts_worker for attempt ' . $latest .
+            '.*Queued 3 overdue attempt update tasks after scanning 3 attempts\./s',
+        );
         $task->execute();
 
-        $classname = manager::get_canonical_class_name(update_overdue_attempt::class);
+        $classname = manager::get_canonical_class_name(update_overdue_attempts_worker::class);
 
         $records = $DB->get_records(
             'task_adhoc',
@@ -179,15 +192,15 @@ final class queue_overdue_attempt_updates_test extends advanced_testcase {
             'id, customdata',
         );
 
-        $this->assertCount(2, $records);
+        $this->assertCount(3, $records);
         $queuedattemptids = [];
         foreach ($records as $record) {
             $queuedattemptids[] = (int)json_decode($record->customdata)->attemptid;
         }
 
-        $this->assertEquals([$oldest, $middle], $queuedattemptids);
+        $this->assertEquals([$oldest, $middle, $latest], $queuedattemptids);
         $this->assertNotContains($finishedold, $queuedattemptids);
-        $this->assertNotContains($latest, $queuedattemptids);
         $this->assertNotContains($notdue, $queuedattemptids);
     }
+
 }

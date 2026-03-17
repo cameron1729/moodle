@@ -84,16 +84,5 @@ function xmldb_quiz_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026022400, 'quiz');
     }
 
-    if ($oldversion < 2026031100) {
-        // Disable the deprecated overdue attempt scheduled task.
-        if ($task = \core\task\manager::get_scheduled_task(\mod_quiz\task\update_overdue_attempts::class)) {
-            $task->set_disabled(true);
-            \core\task\manager::configure_scheduled_task($task);
-        }
-
-        // Quiz savepoint reached.
-        upgrade_mod_savepoint(true, 2026031100, 'quiz');
-    }
-
     return true;
 }

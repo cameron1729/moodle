@@ -24,8 +24,7 @@
  */
 namespace mod_quiz\task;
 
-use core\attribute\deprecated;
-use core\deprecation;
+use core\task\manager;
 use mod_quiz\quiz_attempt;
 use moodle_exception;
 use moodle_recordset;
@@ -42,35 +41,52 @@ require_once($CFG->dirroot . '/mod/quiz/locallib.php');
  * @copyright  2017 Michael Hughes
  * @author Michael Hughes
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @deprecated Since Moodle 5.2. Replaced by queue_overdue_attempt_updates and update_overdue_attempt tasks.
  *
  */
-#[deprecated(replacement: queue_overdue_attempt_updates::class, since: '5.2', mdl: 'MDL-88158')]
 class update_overdue_attempts extends \core\task\scheduled_task {
-    /**
-     * @deprecated since Moodle 5.2. Replaced by queue_overdue_attempt_updates and update_overdue_attempt tasks.
-     */
     public function get_name(): string {
-        deprecation::emit_deprecation([self::class, __FUNCTION__]);
         return get_string('updateoverdueattemptstask', 'mod_quiz');
     }
 
     /**
      * Close off any overdue attempts.
-     *
-     * @deprecated since Moodle 5.2. Replaced by queue_overdue_attempt_updates and update_overdue_attempt tasks.
      */
     public function execute() {
-        deprecation::emit_deprecation([self::class, __FUNCTION__]);
+        global $DB;
 
         $timenow = time();
-        $processto = $timenow - get_config('quiz', 'graceperiodmin');
+        $processto = $timenow - (int)get_config('quiz', 'graceperiodmin');
+        $queuedcount = 0;
+        $scannedcount = 0;
 
-        mtrace('  Looking for quiz overdue quiz attempts...');
+        mtrace('  Looking for overdue quiz attempts to queue...');
 
-        list($count, $quizcount) = $this->update_all_overdue_attempts($timenow, $processto);
+        $attemptstoprocess = $DB->get_recordset_select(
+            'quiz_attempts',
+            "state IN ('inprogress', 'overdue') AND timecheckstate <= :processto",
+            ['processto' => $processto],
+            'timecheckstate, id',
+            'id, timecheckstate',
+        );
 
-        mtrace('  Considered ' . $count . ' attempts in ' . $quizcount . ' quizzes.');
+        try {
+            foreach ($attemptstoprocess as $attempt) {
+                $scannedcount++;
+
+                $attemptid = (int)$attempt->id;
+                $task = new update_overdue_attempts_worker();
+                $task->set_custom_data((object)['attemptid' => $attemptid]);
+
+                if (manager::queue_adhoc_task($task, true) !== false) {
+                    $queuedcount++;
+                    mtrace("  Queued update_overdue_attempts_worker for attempt {$attemptid}");
+                }
+            }
+        } finally {
+            $attemptstoprocess->close();
+        }
+
+        mtrace("  Queued {$queuedcount} overdue attempt update tasks after scanning {$scannedcount} attempts.");
     }
 
     /**
@@ -79,11 +95,9 @@ class update_overdue_attempts extends \core\task\scheduled_task {
      * @param int $timenow the time to consider as 'now' during the processing.
      * @param int $processto only process attempt with timecheckstate longer ago than this.
      * @return array with two elements, the number of attempt considered, and how many different quizzes that was.
-     * @deprecated since Moodle 5.2. Replaced by queue_overdue_attempt_updates and update_overdue_attempt tasks.
      */
     public function update_all_overdue_attempts(int $timenow, int $processto): array {
         global $DB;
-        deprecation::emit_deprecation([self::class, __FUNCTION__]);
 
         $attemptstoprocess = $this->get_list_of_overdue_attempts($processto);
 
@@ -148,11 +162,9 @@ class update_overdue_attempts extends \core\task\scheduled_task {
      * @param int $processto timestamp to process up to.
      * @return moodle_recordset of quiz_attempts that need to be processed because time has
      *     passed, sorted by courseid then quizid.
-     * @deprecated since Moodle 5.2. Replaced by queue_overdue_attempt_updates and update_overdue_attempt tasks.
      */
     public function get_list_of_overdue_attempts(int $processto): moodle_recordset {
         global $DB;
-        deprecation::emit_deprecation([self::class, __FUNCTION__]);
 
         // SQL to compute timeclose and timelimit for each attempt.
         $quizausersql = quiz_get_attempt_usertime_sql(

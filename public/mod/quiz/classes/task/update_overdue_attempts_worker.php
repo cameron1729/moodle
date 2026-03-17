@@ -35,7 +35,7 @@ require_once($CFG->dirroot . '/mod/quiz/locallib.php');
  * @author    Cameron Ball <cameronball@catalyst-au.net>
  * @license   https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class update_overdue_attempt extends adhoc_task {
+class update_overdue_attempts_worker extends adhoc_task {
     #[\Override]
     public function get_name(): string {
         return get_string('updateoverdueattempttask', 'mod_quiz');
@@ -55,7 +55,7 @@ class update_overdue_attempt extends adhoc_task {
             throw new coding_exception(__METHOD__ . ' requires a valid attemptid in customdata.');
         }
 
-        // Recheck the latest attempt state and user-specific timing data before processing.
+        // Recheck the latest attempt state and user specific timing data before processing.
         $attempt = $this->get_attempt_to_process($attemptid, $processto);
         if (!$attempt) {
             return;
@@ -81,9 +81,15 @@ class update_overdue_attempt extends adhoc_task {
             throw new coding_exception("Cannot process overdue attempt {$attemptid}: course {$quiz->course} not found.");
         }
 
+        $attempttiming = $this->get_attempt_timing($attemptid);
+        if (!$attempttiming) {
+            $this->set_attempts_available(0);
+            throw new coding_exception("Cannot process overdue attempt {$attemptid}: user timing data not found.");
+        }
+
         $quizforuser = clone($quiz);
-        $quizforuser->timeclose = $attempt->usertimeclose;
-        $quizforuser->timelimit = $attempt->usertimelimit;
+        $quizforuser->timeclose = $attempttiming->usertimeclose;
+        $quizforuser->timelimit = $attempttiming->usertimelimit;
 
         $attemptobj = new quiz_attempt($attempt, $quizforuser, $cm, $course);
         $attemptobj->handle_if_time_expired($timenow, false);
@@ -92,31 +98,45 @@ class update_overdue_attempt extends adhoc_task {
     /**
      * Get the attempt if it still requires overdue handling.
      *
-     * @param int $attemptid
-     * @param int $processto timestamp to process up to.
-     * @return stdClass|null
+     * @param int $attemptid Quiz attempt ID.
+     * @param int $processto Timestamp to process up to.
+     * @return stdClass|null Attempt record if it still requires overdue handling.
      */
     private function get_attempt_to_process(int $attemptid, int $processto): ?stdClass {
         global $DB;
 
-        $quizausersql = quiz_get_attempt_usertime_sql(
-            "iquiza.id = :iattemptid
-             AND iquiza.state IN ('inprogress', 'overdue')
-             AND iquiza.timecheckstate <= :iprocessto",
-        );
-
-        $sql = "SELECT quiza.*, quizauser.usertimeclose, quizauser.usertimelimit
+        $sql = "SELECT quiza.*
                   FROM {quiz_attempts} quiza
-                  JOIN ($quizausersql) quizauser ON quizauser.id = quiza.id
                  WHERE quiza.id = :attemptid
                    AND quiza.state IN ('inprogress', 'overdue')
                    AND quiza.timecheckstate <= :processto";
 
         $params = [
-            'iattemptid' => $attemptid,
-            'iprocessto' => $processto,
             'attemptid' => $attemptid,
             'processto' => $processto,
+        ];
+
+        return $DB->get_record_sql($sql, $params) ?: null;
+    }
+
+    /**
+     * Get user specific timing data for an attempt.
+     *
+     * @param int $attemptid Quiz attempt ID.
+     * @return stdClass|null User timing data for the attempt.
+     */
+    private function get_attempt_timing(int $attemptid): ?stdClass {
+        global $DB;
+
+        $quizausersql = quiz_get_attempt_usertime_sql("iquiza.id = :iattemptid");
+
+        $sql = "SELECT quizauser.usertimeclose, quizauser.usertimelimit
+                  FROM ($quizausersql) quizauser
+                 WHERE quizauser.id = :attemptid";
+
+        $params = [
+            'iattemptid' => $attemptid,
+            'attemptid' => $attemptid,
         ];
 
         return $DB->get_record_sql($sql, $params) ?: null;
