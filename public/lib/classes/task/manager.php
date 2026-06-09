@@ -462,7 +462,9 @@ class manager {
         $record->hostname = $task->get_hostname();
         $record->pid = $task->get_pid();
         $record->attemptsavailable = $task->get_attempts_available();
-        $record->identityhash = $needsidentityhash ? self::build_task_identity_hash($task) : null;
+        if ($needsidentityhash) {
+            $record->identityhash = self::build_task_identity_hash($task);
+        }
 
         return $record;
     }

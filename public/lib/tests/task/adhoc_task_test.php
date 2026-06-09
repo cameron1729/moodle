@@ -762,15 +762,17 @@ final class adhoc_task_test extends \advanced_testcase {
         // Schedule adhoc task.
         $task = new adhoc_test_task();
         $task->set_custom_data(['courseid' => 10]);
-        $this->assertNotEmpty(manager::queue_adhoc_task($task, true));
+        $taskid1 = manager::queue_adhoc_task($task, true);
+        $this->assertNotEmpty($taskid1);
         $this->assertEquals(1, count(manager::get_adhoc_tasks('core\task\adhoc_test_task')));
         $taskrecord1 = manager::get_queued_adhoc_task_record($task);
         $this->assertObjectHasProperty('id', $taskrecord1);
+        $this->assertEquals($taskid1, $taskrecord1->id);
 
-        // Verify again that re-scheduling the same task does nothing.
+        // Verify again that re-scheduling the same task returns the existing task id.
         $task = new adhoc_test_task();
         $task->set_custom_data(['courseid' => 10]);
-        $this->assertFalse(manager::queue_adhoc_task($task, true));
+        $this->assertEquals($taskrecord1->id, manager::queue_adhoc_task($task, true));
         $this->assertEquals(1, count(manager::get_adhoc_tasks('core\task\adhoc_test_task')));
         $taskrecord2 = manager::get_queued_adhoc_task_record($task);
         $this->assertEquals($taskrecord1->id, $taskrecord2->id);
@@ -782,13 +784,13 @@ final class adhoc_task_test extends \advanced_testcase {
             'attemptsavailable' => 0,
         ]);
 
-        // Now, schedule the task again. Should create a new task.
+        // Now, schedule the task again. The existing task should be revived.
         $task = new adhoc_test_task();
         $task->set_custom_data(['courseid' => 10]);
-        $this->assertNotEmpty(manager::queue_adhoc_task($task, true));
-        $this->assertEquals(2, count(manager::get_adhoc_tasks('core\task\adhoc_test_task')));
+        $this->assertEquals($taskrecord1->id, manager::queue_adhoc_task($task, true));
+        $this->assertEquals(1, count(manager::get_adhoc_tasks('core\task\adhoc_test_task')));
         $taskrecord3 = manager::get_queued_adhoc_task_record($task);
-        $this->assertNotEquals($taskrecord1->id, $taskrecord3->id);
+        $this->assertEquals($taskrecord1->id, $taskrecord3->id);
         $this->assertEquals(0, $taskrecord3->faildelay);
         $this->assertEquals(12, $taskrecord3->attemptsavailable);
     }
@@ -1377,6 +1379,43 @@ final class adhoc_task_test extends \advanced_testcase {
         // The task in execution should remain.
         $updatedtask = $DB->get_record('task_adhoc', ['id' => $taskinexecution]);
         $this->assertNotEmpty($updatedtask->timestarted);
+    }
+
+    /**
+     * Test that a running task remains deduplicated.
+     */
+    public function test_running_task_keeps_identityhash(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $clock = $this->mock_clock_with_frozen();
+        $now = $clock->time();
+
+        $task = new \core\task\adhoc_test_task();
+        $task->set_component('core_testcomponent');
+        $task->set_custom_data(['quizid' => 123]);
+        $taskid = \core\task\manager::queue_adhoc_task($task, true);
+
+        $record = $DB->get_record('task_adhoc', ['id' => $taskid], '*', MUST_EXIST);
+        $this->assertNotEmpty($record->identityhash);
+
+        $runningtask = \core\task\manager::get_next_adhoc_task($now);
+        $this->assertNotNull($runningtask);
+        \core\task\manager::adhoc_task_starting($runningtask);
+
+        $startedrecord = $DB->get_record('task_adhoc', ['id' => $taskid], '*', MUST_EXIST);
+        $this->assertEquals($record->identityhash, $startedrecord->identityhash);
+        $this->assertNotEmpty($startedrecord->timestarted);
+
+        $duplicatetask = new \core\task\adhoc_test_task();
+        $duplicatetask->set_component('core_testcomponent');
+        $duplicatetask->set_custom_data(['quizid' => 123]);
+        $duplicatetaskid = \core\task\manager::queue_adhoc_task($duplicatetask, true);
+
+        $this->assertEquals($taskid, $duplicatetaskid);
+        $this->assertEquals(1, $DB->count_records('task_adhoc', ['component' => 'core_testcomponent']));
+
+        \core\task\manager::adhoc_task_complete($runningtask);
     }
 
     /**
