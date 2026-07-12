@@ -91,7 +91,8 @@
         "maxmind-db/reader": "1.12.1",
         "redeyeventures/geopattern": "1.1.2",
         "phpxmlrpc/phpxmlrpc": "4.11.1",
-        "ralouphie/getallheaders": "3.0.3"
+        "ralouphie/getallheaders": "3.0.3",
+        "cameron1729/seb-json": "1.1.0"
     },
     "suggest": {
         "ext-mysqli": "Needed when Moodle uses MySQL or MariaDB database.",

@@ -64,7 +64,7 @@ class config_key {
         // Remove the key "originatorVersion" first. This key is exempted from the SEB-JSON hash (it's a special key
         // which doesn't have any functionality, it's just meta data indicating which SEB version saved the config file).
         $plist->delete_element('originatorVersion');
-        // Convert the plist XML of a decrypted/unencrypted SEB config file to a ordered JSON-like "SEB-JSON" object.
+        // Convert the plist XML of a decrypted/unencrypted SEB config file to the ordered SEB-JSON byte representation.
         $hash = $plist->to_json();
         // Hash the JSON with SHA256. Defaults to required Base16 encoding.
         $hash = hash('SHA256', $hash);

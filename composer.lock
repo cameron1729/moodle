@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a68990e6c2753993d05a20ba3be3fbf4",
+    "content-hash": "e685e0523f63508d29e426e6250b4dee",
     "packages": [
         {
             "name": "adodb/adodb-php",
@@ -231,6 +231,61 @@
                 "source": "https://github.com/aws/aws-sdk-php/tree/3.356.22"
             },
             "time": "2025-09-19T18:25:30+00:00"
+        },
+        {
+            "name": "cameron1729/seb-json",
+            "version": "v1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/cameron1729/seb-json.git",
+                "reference": "37664a88aa2f7b9c2808f62d02e6d99f92a7279e"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/cameron1729/seb-json/zipball/37664a88aa2f7b9c2808f62d02e6d99f92a7279e",
+                "reference": "37664a88aa2f7b9c2808f62d02e6d99f92a7279e",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.1"
+            },
+            "require-dev": {
+                "ext-simplexml": "*",
+                "phpstan/phpstan": "^2.1",
+                "phpunit/phpunit": "^10.5 || ^11.0 || ^12.0 || ^13.0",
+                "squizlabs/php_codesniffer": "^3.13 || ^4.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "cameron1729\\SebJson\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "GPL-3.0-or-later"
+            ],
+            "authors": [
+                {
+                    "name": "Cameron Ball",
+                    "email": "cameron@cameron1729.xyz",
+                    "homepage": "https://cameron1729.xyz"
+                }
+            ],
+            "description": "Encode PHP values as Safe Exam Browser SEB-JSON for Config Key generation.",
+            "homepage": "https://github.com/cameron1729/seb-json",
+            "keywords": [
+                "config-key",
+                "encoder",
+                "safe-exam-browser",
+                "seb",
+                "seb-json"
+            ],
+            "support": {
+                "issues": "https://github.com/cameron1729/seb-json/issues",
+                "source": "https://github.com/cameron1729/seb-json"
+            },
+            "time": "2026-08-02T10:42:46+00:00"
         },
         {
             "name": "composer/ca-bundle",
@@ -7786,5 +7841,5 @@
         "ext-sodium": "*"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.9.0"
+    "plugin-api-version": "2.6.0"
 }
