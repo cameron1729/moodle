@@ -25,6 +25,7 @@
 
 namespace quizaccess_seb;
 
+use cameron1729\SebJson\SebJson;
 use CFPropertyList\CFArray;
 use CFPropertyList\CFBoolean;
 use CFPropertyList\CFData;
@@ -45,9 +46,6 @@ use \DateTime;
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class property_list {
-
-    /** A random 4 character unicode string to replace backslashes during json_encode. */
-    private const BACKSLASH_SUBSTITUTE = "ؼҷҍԴ";
 
     /** @var CFPropertyList $cfpropertylist */
     private $cfpropertylist;
@@ -202,13 +200,13 @@ class property_list {
     }
 
     /**
-     * Return a JSON representation of the PList. The JSON is constructed to be used to generate a SEB Config Key.
+     * Return a SEB-JSON representation of the PList for generating a SEB Config Key.
      *
-     * See the developer documention for SEB for more information on the requirements on generating a SEB Config Key.
+     * See the developer documentation for SEB for more information on the requirements for generating a SEB Config Key.
      * https://safeexambrowser.org/developer/seb-config-key.html
      *
      * 1. Don't add any whitespace or line formatting to the SEB-JSON string.
-     * 2. Don't add character escaping (also backshlashes "\" as found in URL filter rules should not be escaped).
+     * 2. Don't add character escaping (also backslashes "\" as found in URL filter rules should not be escaped).
      * 3. All <dict> elements from the plist XML must be ordered (alphabetically sorted) by their key names. Use a
      * recursive method to apply ordering also to nested dictionaries contained in the root-level dictionary and in
      * arrays. Use non-localized (culture invariant), non-ASCII value based case insensitive ordering. For example the
@@ -217,22 +215,22 @@ class property_list {
      * 4. Remove empty <dict> elements (key/value). Current versions of SEB clients should anyways not generate empty
      * dictionaries, but this was possible with outdated versions. If config files have been generated that time, such
      * elements might still be around.
-     * 5. All string elements must be UTF8 encoded.
+     * 5. All string elements must be UTF-8 encoded.
      * 6. Base16 strings should use lower-case a-f characters, even though this isn't relevant in the current
      * implementation of the Config Key calculation.
      * 7. <data> plist XML elements must be converted to Base64 strings.
      * 8. <date> plist XML elements must be converted to ISO 8601 formatted strings.
      *
-     * @return string A json encoded string.
+     * @return string The SEB-JSON byte representation.
      */
     public function to_json(): string {
         // Create a clone of the PList, so main list isn't mutated.
         $jsonplist = new CFPropertyList();
         $jsonplist->parse($this->cfpropertylist->toXML(), CFPropertyList::FORMAT_XML);
 
-        // Pass root dict to recursively convert dates to ISO 8601 format, encode strings to UTF-8,
-        // lock data to Base 64 encoding and remove empty dictionaries.
-        $this->prepare_plist_for_json_encoding($jsonplist->getValue());
+        // Pass root dict to recursively convert dates to ISO 8601 format, preserve data as Base64 strings,
+        // and remove empty dictionaries.
+        $this->prepare_plist_for_seb_json_encoding($jsonplist->getValue());
 
         // Serialize PList to array.
         $plistarray = $jsonplist->toArray();
@@ -240,30 +238,18 @@ class property_list {
         // Sort array alphabetically by key using case insensitive, natural sorting. See point 3 for more information.
         $plistarray = $this->array_sort($plistarray);
 
-        // Encode in JSON with following rules from SEB docs.
-        // 1. Don't add any whitespace or line formatting to the SEB-JSON string.
-        // 2. Don't add unicode or slash escaping.
-        $json = json_encode($plistarray, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
-
-        // There is no way to prevent json_encode from escaping backslashes. We replace each backslash with a unique string
-        // prior to encoding in prepare_plist_for_json_encoding(). We can then replace the substitute with a single backslash.
-        $json = str_replace(self::BACKSLASH_SUBSTITUTE, "\\", $json);
-        return $json;
+        return SebJson::encode($plistarray);
     }
 
     /**
-     * Recursively convert PList date values from unix to iso 8601 format, and ensure strings are UTF 8 encoded.
+     * Prepare PList values for SEB-JSON encoding.
      *
-     * This will mutate the PList.
-     */
-
-    /**
-     * Recursively convert PList date values from unix to iso 8601 format, and ensure strings are UTF 8 encoded.
+     * Dates are converted to ISO 8601 strings, data is preserved as Base64 strings, and empty dictionaries are removed.
+     * This mutates the PList.
      *
-     * This will mutate the PList.
      * @param \Iterator $root The root element of the PList. Must be a dictionary or array.
      */
-    private function prepare_plist_for_json_encoding($root) {
+    private function prepare_plist_for_seb_json_encoding($root) {
         $this->plist_map( function($value, $key, $parent) {
             // Convert date to ISO 8601 if date object.
             if ($value instanceof CFDate) {
@@ -271,13 +257,6 @@ class property_list {
                 $date->setTimezone(new \DateTimeZone('UTC')); // Zulu timezone a.k.a. UTC+00.
                 $isodate = $date->format('c');
                 $value->setValue($isodate);
-            }
-            // Make sure strings are UTF 8 encoded.
-            if ($value instanceof CFString) {
-                // As literal backslashes will be lost during encoding, we must replace them with a unique substitute to be
-                // reverted after JSON encoding.
-                $string = str_replace("\\", self::BACKSLASH_SUBSTITUTE, $value->getValue());
-                $value->setValue(mb_convert_encoding($string, 'UTF-8'));
             }
             // Data should remain base 64 encoded, so convert to base encoded string for export. Otherwise
             // CFData will decode the data when serialized.
