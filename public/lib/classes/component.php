@@ -115,6 +115,7 @@ class component {
     /** @var array<string|array<string>> associative array of PRS-4 namespaces and corresponding paths. */
     protected static $psr4namespaces = [
         \Aws::class => 'public/lib/aws-sdk/src',
+        \cameron1729\SebJson::class => 'public/lib/seb-json/src',
         \CFPropertyList::class => 'public/lib/plist/src/CFPropertyList',
         \Complex::class => 'public/lib/phpspreadsheet/markbaker/complex/classes/src',
         \Composer\Pcre::class => 'public/lib/composer/pcre/src',

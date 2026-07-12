@@ -16,6 +16,9 @@
 
 namespace quizaccess_seb;
 
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+
 /**
  * PHPUnit for property_list class.
  *
@@ -24,6 +27,7 @@ namespace quizaccess_seb;
  * @copyright 2020 Catalyst IT
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+#[CoversClass(property_list::class)]
 final class property_list_test extends \advanced_testcase {
 
     /**
@@ -106,9 +110,8 @@ final class property_list_test extends \advanced_testcase {
      * @param string $xml XML to create PList.
      * @param string $key Key of element to try and update.
      * @param mixed $value Value to try to update with.
-     *
-     * @dataProvider good_update_data_provider
      */
+    #[DataProvider('good_update_data_provider')]
     public function test_updating_element_value($xml, $key, $value): void {
         $xml = $this->get_plist_xml_header()
             . $xml
@@ -126,9 +129,8 @@ final class property_list_test extends \advanced_testcase {
      * @param mixed $value Bad value to try to update with.
      * @param mixed $expected Expected value of element after update is called.
      * @param string $exceptionmessage Message of exception expected to be thrown.
-
-     * @dataProvider bad_update_data_provider
      */
+    #[DataProvider('bad_update_data_provider')]
     public function test_updating_element_value_with_bad_data(string $xml, string $key, $value, $expected, $exceptionmessage): void {
         $xml = $this->get_plist_xml_header()
             . $xml
@@ -219,16 +221,34 @@ final class property_list_test extends \advanced_testcase {
      *
      * @param string $xml PList XML used to generate CFPropertyList.
      * @param string $expectedjson Expected JSON output.
-     *
-     * @dataProvider json_data_provider
      */
+    #[DataProvider('json_data_provider')]
     public function test_export_to_json($xml, $expectedjson): void {
         $xml = $this->get_plist_xml_header()
             . $xml
             . $this->get_plist_xml_footer();
         $plist = new property_list($xml);
         $generatedjson = $plist->to_json();
-        $this->assertEquals($expectedjson, $generatedjson);
+        $this->assertSame($expectedjson, $generatedjson);
+    }
+
+    /**
+     * Test that SEB-JSON encoding does not depend on the mbstring internal encoding.
+     */
+    public function test_export_to_json_does_not_depend_on_internal_encoding(): void {
+        $xml = $this->get_plist_xml_header()
+            . '<key>string</key><string>侃睦\localhost</string>'
+            . $this->get_plist_xml_footer();
+        $originalencoding = mb_internal_encoding();
+
+        try {
+            mb_internal_encoding('ISO-8859-1');
+            $generatedjson = (new property_list($xml))->to_json();
+        } finally {
+            mb_internal_encoding($originalencoding);
+        }
+
+        $this->assertSame('{"string":"侃睦\localhost"}', $generatedjson);
     }
 
     /**
@@ -240,7 +260,7 @@ final class property_list_test extends \advanced_testcase {
         $plist->delete_element('originatorVersion'); // JSON should not contain originatorVersion key.
         $generatedjson = $plist->to_json();
         $json = trim(file_get_contents(self::get_fixture_path(__NAMESPACE__, 'JSON_unencrypted_mac_001.txt')));
-        $this->assertEquals($json, $generatedjson);
+        $this->assertSame($json, $generatedjson);
     }
 
     /**
@@ -376,26 +396,47 @@ final class property_list_test extends \advanced_testcase {
      * 8. Empty dicts should not be included.
      * 9. JSON key ordering should be case insensitive, and use string ordering.
      * 10. URL forward slashes should not be escaped.
+     * 11. Quotes, backslashes and control characters should not be escaped.
+     * 12. Floating point numbers should use SEB's cross-platform representation.
      *
      * @return array
      */
     public static function json_data_provider(): array {
         $data = "blahblah";
         $base64data = base64_encode($data);
+        $backslashes = fn(int $count): string => str_repeat('\\', $count);
 
         return [
             'date' => ["<key>date</key><date>1940-10-09T22:13:56Z</date>", "{\"date\":\"1940-10-09T22:13:56+00:00\"}"],
             'data' => ["<key>data</key><data>$base64data</data>", "{\"data\":\"$base64data\"}"],
+            'floating point number' => ['<key>number</key><real>0.56</real>', '{"number":0.56}'],
             'string' => ["<key>string</key><string>hello wörld</string>", "{\"string\":\"hello wörld\"}"],
-            'string with 1 backslash' => ["<key>string</key><string>ws:\localhost</string>", "{\"string\":\"ws:\localhost\"}"],
-            'string with 2 backslashes' => ["<key>string</key><string>ws:\\localhost</string>",
-                    '{"string":"ws:\\localhost"}'],
-            'string with 3 backslashes' => ["<key>string</key><string>ws:\\\localhost</string>",
-                    '{"string":"ws:\\\localhost"}'],
-            'string with 4 backslashes' => ["<key>string</key><string>ws:\\\\localhost</string>",
-                    '{"string":"ws:\\\\localhost"}'],
-            'string with 5 backslashes' => ["<key>string</key><string>ws:\\\\\localhost</string>",
-                    '{"string":"ws:\\\\\localhost"}'],
+            'string with unicode' => ['<key>string</key><string>侃睦</string>', '{"string":"侃睦"}'],
+            'string with quotes' => ['<key>string</key><string>say "hello"</string>', '{"string":"say "hello""}'],
+            'string with control characters' => [
+                '<key>string</key><string>&#x09; &#x0A; &#x0D;</string>',
+                "{\"string\":\"\t \n \r\"}",
+            ],
+            'string with 1 backslash' => [
+                '<key>string</key><string>ws:' . $backslashes(1) . 'localhost</string>',
+                '{"string":"ws:' . $backslashes(1) . 'localhost"}',
+            ],
+            'string with 2 backslashes' => [
+                '<key>string</key><string>ws:' . $backslashes(2) . 'localhost</string>',
+                '{"string":"ws:' . $backslashes(2) . 'localhost"}',
+            ],
+            'string with 3 backslashes' => [
+                '<key>string</key><string>ws:' . $backslashes(3) . 'localhost</string>',
+                '{"string":"ws:' . $backslashes(3) . 'localhost"}',
+            ],
+            'string with 4 backslashes' => [
+                '<key>string</key><string>ws:' . $backslashes(4) . 'localhost</string>',
+                '{"string":"ws:' . $backslashes(4) . 'localhost"}',
+            ],
+            'string with 5 backslashes' => [
+                '<key>string</key><string>ws:' . $backslashes(5) . 'localhost</string>',
+                '{"string":"ws:' . $backslashes(5) . 'localhost"}',
+            ],
             'bool' => ["<key>bool</key><true/>", "{\"bool\":true}"],
             'array' => ["<key>array</key><array><key>arraybool</key><false/><key>arraybool2</key><true/></array>"
                     , "{\"array\":[false,true]}"],

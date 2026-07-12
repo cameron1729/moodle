@@ -608,6 +608,18 @@ All rights reserved.</copyright>
     </copyrights>
   </library>
   <library>
+    <location>seb-json</location>
+    <name>SEB-JSON</name>
+    <description>PHP encoder for Safe Exam Browser's SEB-JSON format.</description>
+    <version>1.1.0</version>
+    <license>GPL</license>
+    <licenseversion>3.0+</licenseversion>
+    <repository>https://github.com/cameron1729/seb-json</repository>
+    <copyrights>
+      <copyright>2026 Cameron Ball</copyright>
+    </copyrights>
+  </library>
+  <library>
     <location>zipstream</location>
     <name>ZipStream-PHP</name>
     <description>PHP ZIP Streaming Library</description>
