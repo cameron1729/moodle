@@ -701,8 +701,11 @@ final class manager_test extends \advanced_testcase {
         $lockfactory = \core\lock\lock_config::get_lock_factory('cron');
         $lock = $lockfactory->get_lock($classname, 10);
         $this->assertNotFalse($lock);
-        $result = manager::set_scheduled_task_nextruntime($task, $clock->time() - HOURSECS);
-        $lock->release();
+        try {
+            $result = manager::set_scheduled_task_nextruntime($task, $clock->time() - HOURSECS);
+        } finally {
+            $lock->release();
+        }
 
         $this->assertFalse($result);
         $this->assertSame(
