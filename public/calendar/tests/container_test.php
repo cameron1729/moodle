@@ -16,6 +16,8 @@
 
 namespace core_calendar;
 
+use core_calendar\local\event\data_access\event_vault;
+use core_calendar\local\event\data_access\event_vault_interface;
 use core_calendar\local\event\entities\action_event;
 use core_calendar\local\event\entities\event;
 use core_calendar\local\event\entities\event_interface;
@@ -500,6 +502,65 @@ final class container_test extends \advanced_testcase {
         $mapper2 = \core_calendar\local\event\container::get_event_mapper();
 
         $this->assertTrue($mapper === $mapper2);
+    }
+
+    /**
+     * Test getting the event vault.
+     */
+    public function test_get_event_vault(): void {
+        $vault = \core_calendar\local\event\container::get_event_vault();
+
+        $this->assertInstanceOf(event_vault_interface::class, $vault);
+        $this->assertInstanceOf(event_vault::class, $vault);
+        $this->assertSame($vault, \core_calendar\local\event\container::get_event_vault());
+    }
+
+    /**
+     * Test that resetting the legacy container clears all of its shared state.
+     */
+    public function test_reset_caches(): void {
+        global $USER;
+
+        $factory = \core_calendar\local\event\container::get_event_factory();
+        $mapper = \core_calendar\local\event\container::get_event_mapper();
+        $vault = \core_calendar\local\event\container::get_event_vault();
+        \core_calendar\local\event\container::set_requesting_user(1234);
+
+        \core_calendar\local\event\container::reset_caches();
+
+        $this->assertNotSame($factory, \core_calendar\local\event\container::get_event_factory());
+        $this->assertNotSame($mapper, \core_calendar\local\event\container::get_event_mapper());
+        $this->assertNotSame($vault, \core_calendar\local\event\container::get_event_vault());
+        $this->assertSame($USER->id, \core_calendar\local\event\container::get_requesting_user());
+    }
+
+    /**
+     * Test the legacy requesting user override semantics.
+     */
+    public function test_requesting_user_override(): void {
+        global $USER;
+
+        $currentuserid = $USER->id;
+        \core_calendar\local\event\container::set_requesting_user(1234);
+        $this->assertSame(1234, \core_calendar\local\event\container::get_requesting_user());
+
+        // Historically, empty values have meant that the current user should be used.
+        \core_calendar\local\event\container::set_requesting_user(0);
+        $this->assertSame($currentuserid, \core_calendar\local\event\container::get_requesting_user());
+    }
+
+    /**
+     * Test that the legacy public callback methods remain callable.
+     */
+    public function test_component_callback_methods_are_callable(): void {
+        $this->assertIsCallable([
+            \core_calendar\local\event\container::class,
+            'apply_component_provide_event_action',
+        ]);
+        $this->assertIsCallable([
+            \core_calendar\local\event\container::class,
+            'apply_component_is_event_visible',
+        ]);
     }
 
     /**

@@ -33,7 +33,6 @@ defined('MOODLE_INTERNAL') || die();
 use core_calendar\action_factory;
 use core_calendar\local\event\data_access\event_vault;
 use core_calendar\local\event\entities\action_event;
-use core_calendar\local\event\entities\action_event_interface;
 use core_calendar\local\event\entities\event_interface;
 use core_calendar\local\event\factories\event_factory;
 use core_calendar\local\event\mappers\event_mapper;
@@ -118,79 +117,22 @@ class container {
                 )
             );
 
+            $eventaccesspolicy = new event_access_policy();
+            $componenteventservice = self::get_component_event_service();
+
             self::$eventfactory = new event_factory(
-                [self::class, 'apply_component_provide_event_action'],
-                [self::class, 'apply_component_is_event_visible'],
-                function ($dbrow) {
-                    $requestinguserid = self::get_requesting_user();
-
-                    if (!empty($dbrow->categoryid)) {
-                        // This is a category event. Check that the category is visible to this user.
-                        $category = \core_course_category::get($dbrow->categoryid, IGNORE_MISSING, true, $requestinguserid);
-
-                        if (empty($category) || !$category->is_uservisible($requestinguserid)) {
-                            return true;
-                        }
-                    }
-
-                    // For non-module events we assume that all checks were done in core_calendar_is_event_visible callback.
-                    // For module events we also check that the course module and course itself are visible to the user.
-                    if (empty($dbrow->modulename)) {
-                        return false;
-                    }
-
-                    $instances = get_fast_modinfo($dbrow->courseid, $requestinguserid)->instances;
-
-                    // If modinfo doesn't know about the module, we should ignore it.
-                    if (!isset($instances[$dbrow->modulename]) || !isset($instances[$dbrow->modulename][$dbrow->instance])) {
-                        return true;
-                    }
-
-                    $cm = $instances[$dbrow->modulename][$dbrow->instance];
-
-                    // If the module is not visible to the current user, we should ignore it.
-                    // We have to check enrolment here as well because the uservisible check
-                    // looks for the "view" capability however some activities (such as Lesson)
-                    // have that capability set on the "Authenticated User" role rather than
-                    // on "Student" role, which means uservisible returns true even when the user
-                    // is no longer enrolled in the course.
-                    // So, with the following we are checking -
-                    // 1) Only process modules if $cm->uservisible is true.
-                    // 2) Only process modules for courses a user has the capability to view OR they are enrolled in.
-                    // 3) Only process modules for courses that are visible OR if the course is not visible, the user
-                    //    has the capability to view hidden courses.
-                    if (!$cm->uservisible) {
-                        return true;
-                    }
-
-                    $coursecontext = \context_course::instance($dbrow->courseid);
-                    if (!$cm->get_course()->visible &&
-                            !has_capability('moodle/course:viewhiddencourses', $coursecontext, $requestinguserid)) {
-                        return true;
-                    }
-
-                    if (!has_capability('moodle/course:view', $coursecontext, $requestinguserid) &&
-                            !is_enrolled($coursecontext, $requestinguserid)) {
-                        return true;
-                    }
-
-                    // Ok, now check if we are looking at a completion event.
-                    if ($dbrow->eventtype === \core_completion\api::COMPLETION_EVENT_TYPE_DATE_COMPLETION_EXPECTED) {
-                        // Need to have completion enabled before displaying these events.
-                        $course = new \stdClass();
-                        $course->id = $dbrow->courseid;
-                        $completion = new \completion_info($course);
-                        if ($completion->is_enabled($cm)) {
-                            // Check if the event is completed, then in this case we do not need to complete it.
-                            // Make sure we're using a cm_info object.
-                            $completiondata = $completion->get_data($cm);
-                            return intval($completiondata->completionstate) === COMPLETION_COMPLETE;
-                        }
-                        return true;
-                    }
-
-                    return false;
-                },
+                fn(event_interface $event) => $componenteventservice->apply_action(
+                    $event,
+                    self::get_requesting_user(),
+                ),
+                fn(event_interface $event) => $componenteventservice->is_visible(
+                    $event,
+                    self::get_requesting_user(),
+                ),
+                fn($dbrow) => $eventaccesspolicy->should_bail_out(
+                    $dbrow,
+                    self::get_requesting_user(),
+                ),
                 self::$coursecache,
                 self::$modulecache
             );
@@ -281,37 +223,8 @@ class container {
      * @return action_event|event_interface
      */
     public static function apply_component_provide_event_action(event_interface $event) {
-        // Callbacks will get supplied a "legacy" version
-        // of the event class.
-        $mapper = self::$eventmapper;
-        $action = null;
-        if ($event->get_component()) {
-            $requestinguserid = self::get_requesting_user();
-            $legacyevent = $mapper->from_event_to_legacy_event($event);
-            // We know for a fact that the the requesting user might be different from the logged in user,
-            // but the event mapper is not aware of that.
-            if (empty($event->user) && !empty($legacyevent->userid)) {
-                $legacyevent->userid = $requestinguserid;
-            }
-
-            // Any other event will not be displayed on the dashboard.
-            $action = component_callback(
-                $event->get_component(),
-                'core_calendar_provide_event_action',
-                [
-                    $legacyevent,
-                    self::$actionfactory,
-                    $requestinguserid
-                ]
-            );
-        }
-
-        // If we get an action back, return an action event, otherwise
-        // continue piping through the original event.
-        //
-        // If a module does not implement the callback, component_callback
-        // returns null.
-        return $action ? new action_event($event, $action) : $event;
+        self::init();
+        return self::get_component_event_service()->apply_action($event, self::get_requesting_user());
     }
 
     /**
@@ -325,37 +238,16 @@ class container {
      * @return bool
      */
     public static function apply_component_is_event_visible(event_interface $event) {
-        $mapper = self::$eventmapper;
-        $eventvisible = null;
-        if ($event->get_component()) {
-            $requestinguserid = self::get_requesting_user();
-            $legacyevent = $mapper->from_event_to_legacy_event($event);
-            // We know for a fact that the the requesting user might be different from the logged in user,
-            // but the event mapper is not aware of that.
-            if (empty($event->user) && !empty($legacyevent->userid)) {
-                $legacyevent->userid = $requestinguserid;
-            }
+        self::init();
+        return self::get_component_event_service()->is_visible($event, self::get_requesting_user());
+    }
 
-            $eventvisible = component_callback(
-                $event->get_component(),
-                'core_calendar_is_event_visible',
-                [
-                    $legacyevent,
-                    $requestinguserid
-                ]
-            );
-        }
-
-        // Do not display the event if there is nothing to action.
-        if ($event instanceof action_event_interface && $event->get_action()->get_item_count() === 0) {
-            return false;
-        }
-
-        // Module does not implement the callback, event should be visible.
-        if (is_null($eventvisible)) {
-            return true;
-        }
-
-        return $eventvisible ? true : false;
+    /**
+     * Create the component callback service used by the legacy compatibility methods.
+     *
+     * @return component_event_service
+     */
+    private static function get_component_event_service(): component_event_service {
+        return new component_event_service(self::$eventmapper, self::$actionfactory);
     }
 }
