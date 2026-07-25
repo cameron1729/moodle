@@ -44,47 +44,7 @@ use core_calendar\local\event\strategies\raw_event_retrieval_strategy;
  * @copyright 2017 Cameron Ball <cameron@cameron1729.xyz>
  * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class container {
-    /**
-     * @var event_factory $eventfactory Event factory.
-     */
-    protected static $eventfactory;
-
-    /**
-     * @var event_mapper $eventmapper Event mapper.
-     */
-    protected static $eventmapper;
-
-    /**
-     * @var action_factory $actionfactory Action factory.
-     */
-    protected static $actionfactory;
-
-    /**
-     * @var event_vault $eventvault Event vault.
-     */
-    protected static $eventvault;
-
-    /**
-     * @var raw_event_retrieval_strategy $eventretrievalstrategy Event retrieval strategy.
-     */
-    protected static $eventretrievalstrategy;
-
-    /**
-     * @var \stdClass[] An array of cached courses to use with the event factory.
-     */
-    protected static $coursecache = array();
-
-    /**
-     * @var \stdClass[] An array of cached modules to use with the event factory.
-     */
-    protected static $modulecache = array();
-
-    /**
-     * @var int The requesting user. All capability checks are done against this user.
-     */
-    protected static $requestinguserid;
-
+class container extends legacy_container_state {
     /**
      * Initialises the dependency graph if it hasn't yet been.
      */
@@ -101,15 +61,15 @@ class container {
                 // return the instance.
                 new event_factory(
                     // Never apply actions, simply return.
-                    function(event_interface $event) {
+                    function (event_interface $event) {
                         return $event;
                     },
                     // Never hide an event.
-                    function() {
+                    function () {
                         return true;
                     },
                     // Never bail out early when instantiating an event.
-                    function() {
+                    function () {
                         return false;
                     },
                     self::$coursecache,
@@ -123,15 +83,15 @@ class container {
             self::$eventfactory = new event_factory(
                 fn(event_interface $event) => $componenteventservice->apply_action(
                     $event,
-                    self::get_requesting_user(),
+                    legacy_container_state::get_requesting_user(),
                 ),
                 fn(event_interface $event) => $componenteventservice->is_visible(
                     $event,
-                    self::get_requesting_user(),
+                    legacy_container_state::get_requesting_user(),
                 ),
                 fn($dbrow) => $eventaccesspolicy->should_bail_out(
                     $dbrow,
-                    self::get_requesting_user(),
+                    legacy_container_state::get_requesting_user(),
                 ),
                 self::$coursecache,
                 self::$modulecache
@@ -148,14 +108,7 @@ class container {
      * Reset all static caches, called between tests.
      */
     public static function reset_caches() {
-        self::$requestinguserid = null;
-        self::$eventfactory = null;
-        self::$eventmapper = null;
-        self::$eventvault = null;
-        self::$actionfactory = null;
-        self::$eventretrievalstrategy = null;
-        self::$coursecache = [];
-        self::$modulecache = [];
+        parent::reset_caches();
     }
 
     /**
@@ -198,7 +151,7 @@ class container {
      * @throws \coding_exception
      */
     public static function set_requesting_user($userid) {
-        self::$requestinguserid = $userid;
+        parent::set_requesting_user($userid);
     }
 
     /**
@@ -208,9 +161,7 @@ class container {
      * @return int
      */
     public static function get_requesting_user() {
-        global $USER;
-
-        return empty(self::$requestinguserid) ? $USER->id : self::$requestinguserid;
+        return parent::get_requesting_user();
     }
 
     /**
@@ -224,7 +175,7 @@ class container {
      */
     public static function apply_component_provide_event_action(event_interface $event) {
         self::init();
-        return self::get_component_event_service()->apply_action($event, self::get_requesting_user());
+        return self::get_component_event_service()->apply_action($event, parent::get_requesting_user());
     }
 
     /**
@@ -239,7 +190,7 @@ class container {
      */
     public static function apply_component_is_event_visible(event_interface $event) {
         self::init();
-        return self::get_component_event_service()->is_visible($event, self::get_requesting_user());
+        return self::get_component_event_service()->is_visible($event, parent::get_requesting_user());
     }
 
     /**

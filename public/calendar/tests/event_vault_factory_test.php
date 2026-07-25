@@ -18,11 +18,13 @@ namespace core_calendar;
 
 use core\di;
 use core_calendar\local\event\component_event_service;
+use core_calendar\local\event\container;
 use core_calendar\local\event\data_access\event_vault;
 use core_calendar\local\event\data_access\event_vault_factory;
 use core_calendar\local\event\entities\event_interface;
 use core_calendar\local\event\event_access_policy;
 use core_calendar\local\event\factories\event_entity_factory;
+use core_calendar\local\event\legacy_container_state;
 use core_calendar\local\event\mappers\event_mapper;
 use core_calendar\local\event\strategies\raw_event_retrieval_strategy;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -142,6 +144,39 @@ final class event_vault_factory_test extends \advanced_testcase {
         $this->assertSame([22, 11, 22], $policyrequesters);
         $this->assertSame([22, 11, 22], $actionrequesters);
         $this->assertSame([22, 11, 22], $visibilityrequesters);
+    }
+
+    /**
+     * Test that an explicit requester does not alter the legacy compatibility state.
+     */
+    public function test_explicit_requester_does_not_change_legacy_requesting_user(): void {
+        legacy_container_state::set_requesting_user(1234);
+
+        calendar_get_legacy_events(
+            0,
+            1,
+            false,
+            false,
+            false,
+            requestinguserid: 5678,
+        );
+
+        $this->assertSame(1234, legacy_container_state::get_requesting_user());
+        $factoryproperty = new \ReflectionProperty(container::class, 'eventfactory');
+        $this->assertNull($factoryproperty->getValue());
+    }
+
+    /**
+     * Test that an omitted requester retains the legacy user side effect while using the native graph.
+     */
+    public function test_omitted_requester_uses_native_graph(): void {
+        $user = $this->getDataGenerator()->create_user();
+
+        calendar_get_legacy_events(0, 1, $user->id, false, false);
+
+        $this->assertSame($user->id, legacy_container_state::get_requesting_user());
+        $factoryproperty = new \ReflectionProperty(container::class, 'eventfactory');
+        $this->assertNull($factoryproperty->getValue());
     }
 
     /**

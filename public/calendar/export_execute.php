@@ -216,8 +216,18 @@ if(!empty($what) && !empty($time)) {
     }
 }
 $limitnum = 0;
-$events = calendar_get_legacy_events($timestart, $timeend, $users, $groups, array_keys($paramcourses), false, true,
-        $paramcategory, $limitnum);
+$events = calendar_get_legacy_events(
+    $timestart,
+    $timeend,
+    $users,
+    $groups,
+    array_keys($paramcourses),
+    false,
+    true,
+    $paramcategory,
+    $limitnum,
+    $user->id,
+);
 
 $ical = new iCalendar;
 $ical->add_property('method', 'PUBLISH');

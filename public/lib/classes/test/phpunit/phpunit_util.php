@@ -232,9 +232,9 @@ class phpunit_util extends \core\test\testing_util {
         // Reset internal users.
         \core\user::reset_internal_users();
 
-        // Clear static caches in calendar container.
-        if (class_exists(\core_calendar\local\event\container::class, false)) {
-            \core_calendar\local\event\container::reset_caches();
+        // Clear the legacy Calendar graph and compatibility state.
+        if (class_exists(\core_calendar\local\event\legacy_container_state::class, false)) {
+            \core_calendar\local\event\legacy_container_state::reset_caches();
         }
 
         // Reset hub registration caches.

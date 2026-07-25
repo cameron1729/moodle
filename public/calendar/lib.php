@@ -2762,11 +2762,22 @@ function core_calendar_user_preferences() {
  * @param boolean $ignorehidden whether to select only visible events or all events
  * @param array $categories array of category ids and/or objects.
  * @param int $limitnum Number of events to fetch or zero to fetch all.
+ * @param int|null $requestinguserid Requesting user id. When omitted, legacy requesting-user state is honoured.
  *
  * @return array $events of selected events or an empty array if there aren't any (or there was an error)
  */
-function calendar_get_legacy_events($tstart, $tend, $users, $groups, $courses,
-        $withduration = true, $ignorehidden = true, $categories = [], $limitnum = 0) {
+function calendar_get_legacy_events(
+    $tstart,
+    $tend,
+    $users,
+    $groups,
+    $courses,
+    $withduration = true,
+    $ignorehidden = true,
+    $categories = [],
+    $limitnum = 0,
+    ?int $requestinguserid = null,
+) {
     // Normalise the users, groups and courses parameters so that they are compliant with \core_calendar\local\api::get_events().
     // Existing functions that were using the old calendar_get_events() were passing a mixture of array, int, boolean for these
     // parameters, but with the new API method, only null and arrays are accepted.
@@ -2790,13 +2801,7 @@ function calendar_get_legacy_events($tstart, $tend, $users, $groups, $courses,
         return $param;
     }, [$users, $groups, $courses, $categories]);
 
-    // If a single user is provided, we can use that for capability checks.
-    // Otherwise current logged in user is used - See MDL-58768.
-    if (is_array($userparam) && count($userparam) == 1) {
-        \core_calendar\local\event\container::set_requesting_user($userparam[0]);
-    }
-    $mapper = \core_calendar\local\event\container::get_event_mapper();
-    $events = \core_calendar\local\api::get_events(
+    $eventarguments = [
         $tstart,
         $tend,
         null,
@@ -2810,10 +2815,23 @@ function calendar_get_legacy_events($tstart, $tend, $users, $groups, $courses,
         $courseparam,
         $categoryparam,
         $withduration,
-        $ignorehidden
-    );
+        $ignorehidden,
+    ];
 
-    return array_reduce($events, function($carry, $event) use ($mapper) {
+    if ($requestinguserid === null) {
+        // If a single user is provided, we can use that for capability checks.
+        // Otherwise current logged in user is used - See MDL-58768.
+        if (is_array($userparam) && count($userparam) == 1) {
+            \core_calendar\local\event\legacy_container_state::set_requesting_user($userparam[0]);
+        }
+        $requestinguserid = \core_calendar\local\event\legacy_container_state::get_requesting_user();
+    }
+
+    $vaultfactory = \core\di::get(\core_calendar\local\event\data_access\event_vault_factory::class);
+    $mapper = \core\di::get(\core_calendar\local\event\mappers\event_mapper::class);
+    $events = $vaultfactory->create($requestinguserid)->get_events(...$eventarguments);
+
+    return array_reduce($events, function ($carry, $event) use ($mapper) {
         return $carry + [$event->get_id() => $mapper->from_event_to_stdclass($event)];
     }, []);
 }
@@ -2827,10 +2845,17 @@ function calendar_get_legacy_events($tstart, $tend, $users, $groups, $courses,
  * @param   bool    $includenavigation Whether to include navigation
  * @param   bool    $skipevents Whether to load the events or not
  * @param   int     $lookahead Overwrites site and users's lookahead setting.
+ * @param   int|null $requestinguserid Requesting user id. When omitted, legacy requesting-user state is honoured.
  * @return  array[array, string]
  */
-function calendar_get_view(\calendar_information $calendar, $view, $includenavigation = true, bool $skipevents = false,
-        ?int $lookahead = null) {
+function calendar_get_view(
+    \calendar_information $calendar,
+    $view,
+    $includenavigation = true,
+    bool $skipevents = false,
+    ?int $lookahead = null,
+    ?int $requestinguserid = null,
+) {
     global $PAGE, $CFG;
 
     $renderer = $PAGE->get_renderer('core_calendar');
@@ -2908,7 +2933,7 @@ function calendar_get_view(\calendar_information $calendar, $view, $includenavig
     if ($skipevents) {
         $events = [];
     } else {
-        $events = \core_calendar\local\api::get_events(
+        $eventarguments = [
             $tstart,
             $tend,
             null,
@@ -2936,8 +2961,12 @@ function calendar_get_view(\calendar_information $calendar, $view, $includenavig
                 }
 
                 return true;
-            }
-        );
+            },
+        ];
+
+        $requestinguserid ??= \core_calendar\local\event\legacy_container_state::get_requesting_user();
+        $vaultfactory = \core\di::get(\core_calendar\local\event\data_access\event_vault_factory::class);
+        $events = $vaultfactory->create($requestinguserid)->get_events(...$eventarguments);
     }
 
     $related = [

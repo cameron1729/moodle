@@ -29,10 +29,12 @@ defined('MOODLE_INTERNAL') || die;
 require_once($CFG->dirroot . '/calendar/lib.php');
 
 use core_calendar\local\api as local_api;
-use core_calendar\local\event\container as event_container;
+use core_calendar\local\event\data_access\event_vault_factory;
+use core_calendar\local\event\exceptions\limit_invalid_parameter_exception;
 use core_calendar\local\event\forms\create as create_event_form;
 use core_calendar\local\event\forms\update as update_event_form;
 use core_calendar\local\event\mappers\create_update_form_mapper;
+use core_calendar\local\event\mappers\event_mapper;
 use core_calendar\external\event_exporter;
 use core_calendar\external\events_exporter;
 use core_calendar\external\events_grouped_by_course_exporter;
@@ -308,9 +310,18 @@ class core_calendar_external extends external_api {
         }
 
         // Event list does not check visibility and permissions, we'll check that later.
-        $eventlist = calendar_get_legacy_events($params['options']['timestart'], $params['options']['timeend'],
-                $funcparam['users'], $funcparam['groups'], $funcparam['courses'], true,
-                $params['options']['ignorehidden'], $funcparam['categories']);
+        $eventlist = calendar_get_legacy_events(
+            $params['options']['timestart'],
+            $params['options']['timeend'],
+            $funcparam['users'],
+            $funcparam['groups'],
+            $funcparam['courses'],
+            true,
+            $params['options']['ignorehidden'],
+            $funcparam['categories'],
+            0,
+            $USER->id,
+        );
 
         // WS expects arrays.
         $events = array();
@@ -463,15 +474,30 @@ class core_calendar_external extends external_api {
             $params['aftereventid'] = null;
         }
 
+        if ($params['timesortfrom'] === null && $params['timesortto'] === null) {
+            throw new \moodle_exception('Must provide a timesort to and/or from value');
+        }
+
+        if ($params['limitnum'] < 1 || $params['limitnum'] > 50) {
+            throw new \moodle_exception('Limit must be between 1 and 50 (inclusive)');
+        }
+
+        // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Web service entry point.
+        $vault = \core\di::get(event_vault_factory::class)->create($user->id);
+        $afterevent = null;
+        if ($params['aftereventid'] && $event = $vault->get_event_by_id($params['aftereventid'])) {
+            $afterevent = $event;
+        }
+
         $renderer = $PAGE->get_renderer('core_calendar');
-        $events = local_api::get_action_events_by_timesort(
+        $events = $vault->get_action_events_by_timesort(
+            $user,
             $params['timesortfrom'],
             $params['timesortto'],
-            $params['aftereventid'],
+            $afterevent,
             $params['limitnum'],
             $params['limittononsuspendedevents'],
-            $user,
-            clean_param($params['searchvalue'], PARAM_TEXT)
+            clean_param($params['searchvalue'], PARAM_TEXT),
         );
 
         $exportercache = new events_related_objects_cache($events);
@@ -551,15 +577,27 @@ class core_calendar_external extends external_api {
             return [];
         }
 
+        if ($params['limitnum'] < 1 || $params['limitnum'] > 50) {
+            throw new limit_invalid_parameter_exception('Limit must be between 1 and 50 (inclusive)');
+        }
+
+        // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Web service entry point.
+        $vault = \core\di::get(event_vault_factory::class)->create($USER->id);
+        $afterevent = null;
+        if ($params['aftereventid'] && $event = $vault->get_event_by_id($params['aftereventid'])) {
+            $afterevent = $event;
+        }
+
         $course = $courses[0];
         $renderer = $PAGE->get_renderer('core_calendar');
-        $events = local_api::get_action_events_by_course(
+        $events = $vault->get_action_events_by_course(
+            $USER,
             $course,
             $params['timesortfrom'],
             $params['timesortto'],
-            $params['aftereventid'],
+            $afterevent,
             $params['limitnum'],
-            clean_param($params['searchvalue'], PARAM_TEXT)
+            clean_param($params['searchvalue'], PARAM_TEXT),
         );
 
         $exportercache = new events_related_objects_cache($events, $courses);
@@ -638,13 +676,25 @@ class core_calendar_external extends external_api {
             return ['groupedbycourse' => []];
         }
 
-        $events = local_api::get_action_events_by_courses(
-            $courses,
-            $params['timesortfrom'],
-            $params['timesortto'],
-            $params['limitnum'],
-            clean_param($params['searchvalue'], PARAM_TEXT)
-        );
+        if ($params['limitnum'] < 1 || $params['limitnum'] > 50) {
+            throw new limit_invalid_parameter_exception('Limit must be between 1 and 50 (inclusive)');
+        }
+
+        // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Web service entry point.
+        $vault = \core\di::get(event_vault_factory::class)->create($USER->id);
+        $searchvalue = clean_param($params['searchvalue'], PARAM_TEXT);
+        $events = [];
+        foreach ($courses as $course) {
+            $events[$course->id] = $vault->get_action_events_by_course(
+                $USER,
+                $course,
+                $params['timesortfrom'],
+                $params['timesortto'],
+                null,
+                $params['limitnum'],
+                $searchvalue,
+            );
+        }
 
         if (empty($events)) {
             return ['groupedbycourse' => []];
@@ -818,9 +868,12 @@ class core_calendar_external extends external_api {
         self::validate_context($context);
         $warnings = array();
 
-        $eventvault = event_container::get_event_vault();
-        if ($event = $eventvault->get_event_by_id($params['eventid'])) {
-            $mapper = event_container::get_event_mapper();
+        // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Web service entry point.
+        $eventvault = \core\di::get(event_vault_factory::class)->create($USER->id);
+        $event = $eventvault->get_event_by_id($params['eventid']);
+        if ($event) {
+            // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Web service entry point.
+            $mapper = \core\di::get(event_mapper::class);
             if (!calendar_view_event_allowed($mapper->from_event_to_legacy_event($event))) {
                 throw new moodle_exception('nopermissiontoviewcalendar', 'error');
             }
@@ -978,8 +1031,8 @@ class core_calendar_external extends external_api {
                 $legacyevent->update($properties);
             }
 
-            $eventmapper = event_container::get_event_mapper();
-            $event = $eventmapper->from_legacy_event_to_event($legacyevent);
+            // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Web service entry point.
+            $event = \core\di::get(event_mapper::class)->from_legacy_event_to_event($legacyevent);
             $cache = new events_related_objects_cache([$event]);
             $relatedobjects = [
                 'context' => $cache->get_context($event),
@@ -1051,7 +1104,14 @@ class core_calendar_external extends external_api {
         self::validate_context($calendar->context);
 
         $view = $params['view'] ?? ($params['mini'] ? 'mini' : 'month');
-        list($data, $template) = calendar_get_view($calendar, $view, $params['includenavigation']);
+        [$data, $template] = calendar_get_view(
+            $calendar,
+            $view,
+            $params['includenavigation'],
+            false,
+            null,
+            $USER->id,
+        );
 
         return $data;
     }
@@ -1127,7 +1187,7 @@ class core_calendar_external extends external_api {
         $calendar = \calendar_information::create($time, $params['courseid'], $params['categoryid']);
         self::validate_context($calendar->context);
 
-        list($data, $template) = calendar_get_view($calendar, 'day');
+        [$data, $template] = calendar_get_view($calendar, 'day', true, false, null, $USER->id);
 
         return $data;
     }
@@ -1195,8 +1255,10 @@ class core_calendar_external extends external_api {
             'daytimestamp' => $daytimestamp,
         ]);
 
-        $vault = event_container::get_event_vault();
-        $mapper = event_container::get_event_mapper();
+        // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Web service entry point.
+        $vault = \core\di::get(event_vault_factory::class)->create($USER->id);
+        // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Web service entry point.
+        $mapper = \core\di::get(event_mapper::class);
         $event = $vault->get_event_by_id($eventid);
 
         if (!$event) {
@@ -1262,7 +1324,7 @@ class core_calendar_external extends external_api {
         $calendar = \calendar_information::create(time(), $params['courseid'], $params['categoryid']);
         self::validate_context($calendar->context);
 
-        list($data, $template) = calendar_get_view($calendar, 'upcoming');
+        [$data, $template] = calendar_get_view($calendar, 'upcoming', true, false, null, $USER->id);
 
         return $data;
     }

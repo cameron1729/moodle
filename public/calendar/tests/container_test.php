@@ -23,6 +23,7 @@ use core_calendar\local\event\entities\event;
 use core_calendar\local\event\entities\event_interface;
 use core_calendar\local\event\factories\event_factory;
 use core_calendar\local\event\factories\event_factory_interface;
+use core_calendar\local\event\legacy_container_state;
 use core_calendar\local\event\mappers\event_mapper;
 use core_calendar\local\event\mappers\event_mapper_interface;
 use core_completion\api;
@@ -532,6 +533,46 @@ final class container_test extends \advanced_testcase {
         $this->assertNotSame($mapper, \core_calendar\local\event\container::get_event_mapper());
         $this->assertNotSame($vault, \core_calendar\local\event\container::get_event_vault());
         $this->assertSame($USER->id, \core_calendar\local\event\container::get_requesting_user());
+    }
+
+    /**
+     * Test that resetting the compatibility state also clears the inherited container graph.
+     */
+    public function test_compatibility_state_reset_caches(): void {
+        global $USER;
+
+        $factory = \core_calendar\local\event\container::get_event_factory();
+        $mapper = \core_calendar\local\event\container::get_event_mapper();
+        $vault = \core_calendar\local\event\container::get_event_vault();
+        legacy_container_state::set_requesting_user(1234);
+
+        legacy_container_state::reset_caches();
+
+        $this->assertNotSame($factory, \core_calendar\local\event\container::get_event_factory());
+        $this->assertNotSame($mapper, \core_calendar\local\event\container::get_event_mapper());
+        $this->assertNotSame($vault, \core_calendar\local\event\container::get_event_vault());
+        $this->assertSame($USER->id, legacy_container_state::get_requesting_user());
+    }
+
+    /**
+     * Test that container subclasses retain access to the original protected requesting-user property.
+     */
+    public function test_subclass_can_access_legacy_protected_state(): void {
+        $container = new class extends \core_calendar\local\event\container {
+            /**
+             * Set and return the inherited requesting-user property.
+             *
+             * @param int $userid User id.
+             * @return int User id.
+             */
+            public static function access_requesting_user(int $userid): int {
+                self::$requestinguserid = $userid;
+                return self::$requestinguserid;
+            }
+        };
+
+        $this->assertSame(1234, $container::access_requesting_user(1234));
+        $this->assertSame(1234, legacy_container_state::get_requesting_user());
     }
 
     /**

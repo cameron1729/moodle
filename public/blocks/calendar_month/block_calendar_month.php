@@ -36,7 +36,7 @@ class block_calendar_month extends block_base {
      * @return stdClass the content
      */
     public function get_content() {
-        global $CFG;
+        global $CFG, $USER;
 
         require_once($CFG->dirroot.'/calendar/lib.php');
 
@@ -54,7 +54,7 @@ class block_calendar_month extends block_base {
         $categoryid = ($this->page->context->contextlevel === CONTEXT_COURSECAT && !empty($this->page->category)) ?
             $this->page->category->id : null;
         $calendar = \calendar_information::create(time(), $courseid, $categoryid);
-        list($data, $template) = calendar_get_view($calendar, 'monthblock', isloggedin());
+        [$data, $template] = calendar_get_view($calendar, 'monthblock', isloggedin(), false, null, $USER->id);
 
         // Add a flag that this is coming from calendar block.
         $data->iscalendarblock = true;

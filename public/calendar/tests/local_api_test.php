@@ -16,7 +16,8 @@
 
 namespace core_calendar;
 
-use core_calendar\local\event\container;
+use core_calendar\local\event\legacy_container_state;
+use core_calendar\local\event\mappers\event_mapper;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -51,7 +52,7 @@ final class local_api_test extends \advanced_testcase {
     protected function create_feedback_activity_and_event(array $feedbackproperties = [], array $eventproperties = []) {
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
-        $mapper = container::get_event_mapper();
+        $mapper = \core\di::get(event_mapper::class);
         $feedbackgenerator = $generator->get_plugin_generator('mod_feedback');
         $feedback = $feedbackgenerator->create_instance(array_merge(
             ['course' => $course->id],
@@ -125,6 +126,19 @@ final class local_api_test extends \advanced_testcase {
         $this->setAdminUser();
         $result = \core_calendar\local\api::get_action_events_by_timesort(5, null, null, 20, false, $user);
         $this->assertCount(4, $result);
+    }
+
+    /**
+     * Test that the static compatibility API retains its requesting user side effect.
+     *
+     * @covers ::get_action_events_by_timesort
+     */
+    public function test_get_action_events_by_timesort_retains_requesting_user_override(): void {
+        $user = $this->getDataGenerator()->create_user();
+
+        \core_calendar\local\api::get_action_events_by_timesort(0, null, null, 20, false, $user);
+
+        $this->assertSame($user->id, legacy_container_state::get_requesting_user());
     }
 
     /**
@@ -1057,7 +1071,7 @@ final class local_api_test extends \advanced_testcase {
         $originalstarttime = new \DateTimeImmutable('2017-01-1T15:00:00+08:00');
         $newstartdate = new \DateTimeImmutable('2018-02-2T10:00:00+08:00');
         $expected = new \DateTimeImmutable('2018-02-2T15:00:00+08:00');
-        $mapper = container::get_event_mapper();
+        $mapper = \core\di::get(event_mapper::class);
 
         $generator->role_assign($roleid, $user->id, $context->id);
         assign_capability('moodle/calendar:manageownentries', CAP_ALLOW, $roleid, $context, true);
@@ -1092,7 +1106,7 @@ final class local_api_test extends \advanced_testcase {
         $originalstarttime = new \DateTimeImmutable('2017-01-1T15:00:00+08:00');
         $newstartdate = new \DateTimeImmutable('2018-02-2T10:00:00+08:00');
         $expected = new \DateTimeImmutable('2018-02-2T15:00:00+08:00');
-        $mapper = container::get_event_mapper();
+        $mapper = \core\di::get(event_mapper::class);
 
         $generator->role_assign($roleid, $user->id, $context->id);
 
@@ -1408,7 +1422,7 @@ final class local_api_test extends \advanced_testcase {
 
         $this->resetAfterTest(true);
         $this->setAdminUser();
-        $mapper = container::get_event_mapper();
+        $mapper = \core\di::get(event_mapper::class);
         $timeopen = new \DateTimeImmutable('2017-01-1T15:00:00+08:00');
         $newstartdate = new \DateTimeImmutable('2016-02-2T10:00:00+08:00');
         $generator = $this->getDataGenerator();

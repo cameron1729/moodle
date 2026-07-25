@@ -26,9 +26,11 @@ namespace core_calendar\local;
 
 defined('MOODLE_INTERNAL') || die();
 
-use core_calendar\local\event\container;
+use core_calendar\local\event\data_access\event_vault_factory;
 use core_calendar\local\event\entities\event_interface;
 use core_calendar\local\event\exceptions\limit_invalid_parameter_exception;
+use core_calendar\local\event\legacy_container_state;
+use core_calendar\local\event\mappers\event_mapper;
 
 /**
  * Class containing the local calendar API.
@@ -76,9 +78,9 @@ class api {
         $ignorehidden = true,
         ?callable $filter = null
     ) {
-        global $USER;
-
-        $vault = \core_calendar\local\event\container::get_event_vault();
+        // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Legacy static API boundary.
+        $vaultfactory = \core\di::get(event_vault_factory::class);
+        $vault = $vaultfactory->create(legacy_container_state::get_requesting_user());
 
         $timestartafterevent = null;
         $timesortafterevent = null;
@@ -147,8 +149,10 @@ class api {
             throw new \moodle_exception("Limit must be between 1 and 50 (inclusive)");
         }
 
-        \core_calendar\local\event\container::set_requesting_user($user->id);
-        $vault = \core_calendar\local\event\container::get_event_vault();
+        legacy_container_state::set_requesting_user($user->id);
+        // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Legacy static API boundary.
+        $vaultfactory = \core\di::get(event_vault_factory::class);
+        $vault = $vaultfactory->create($user->id);
 
         $afterevent = null;
         if ($aftereventid && $event = $vault->get_event_by_id($aftereventid)) {
@@ -187,7 +191,9 @@ class api {
                 "Limit must be between 1 and 50 (inclusive)");
         }
 
-        $vault = \core_calendar\local\event\container::get_event_vault();
+        // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Legacy static API boundary.
+        $vaultfactory = \core\di::get(event_vault_factory::class);
+        $vault = $vaultfactory->create(legacy_container_state::get_requesting_user());
 
         $afterevent = null;
         if ($aftereventid && $event = $vault->get_event_by_id($aftereventid)) {
@@ -250,7 +256,8 @@ class api {
     ) {
         global $DB;
 
-        $mapper = container::get_event_mapper();
+        // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Legacy static API boundary.
+        $mapper = \core\di::get(event_mapper::class);
         $legacyevent = $mapper->from_event_to_legacy_event($event);
         $hascoursemodule = !empty($event->get_course_module());
         $moduleinstance = null;

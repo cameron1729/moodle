@@ -36,7 +36,7 @@ class block_calendar_upcoming extends block_base {
      * @return stdClass the content
      */
     public function get_content() {
-        global $CFG;
+        global $CFG, $USER;
 
         require_once($CFG->dirroot.'/calendar/lib.php');
 
@@ -50,7 +50,7 @@ class block_calendar_upcoming extends block_base {
         $courseid = $this->page->course->id;
         $categoryid = ($this->page->context->contextlevel === CONTEXT_COURSECAT) ? $this->page->category->id : null;
         $calendar = \calendar_information::create(time(), $courseid, $categoryid);
-        list($data, $template) = calendar_get_view($calendar, 'upcoming_mini');
+        [$data, $template] = calendar_get_view($calendar, 'upcoming_mini', true, false, null, $USER->id);
 
         $renderer = $this->page->get_renderer('core_calendar');
         $this->content->text .= $renderer->render_from_template($template, $data);
