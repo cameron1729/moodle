@@ -28,9 +28,9 @@ defined('MOODLE_INTERNAL') || die();
 
 use core_calendar\local\event\data_access\event_vault_factory;
 use core_calendar\local\event\entities\event_interface;
+use core_calendar\local\event\event_start_day_updater;
 use core_calendar\local\event\exceptions\limit_invalid_parameter_exception;
 use core_calendar\local\event\legacy_container_state;
-use core_calendar\local\event\mappers\event_mapper;
 
 /**
  * Class containing the local calendar API.
@@ -254,92 +254,8 @@ class api {
         event_interface $event,
         \DateTimeInterface $startdate
     ) {
-        global $DB;
-
         // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Legacy static API boundary.
-        $mapper = \core\di::get(event_mapper::class);
-        $legacyevent = $mapper->from_event_to_legacy_event($event);
-        $hascoursemodule = !empty($event->get_course_module());
-        $moduleinstance = null;
-        $starttime = $event->get_times()->get_start_time()->setDate(
-            $startdate->format('Y'),
-            $startdate->format('n'),
-            $startdate->format('j')
-        );
-        $starttimestamp = $starttime->getTimestamp();
-
-        if ($hascoursemodule) {
-            $moduleinstance = $DB->get_record(
-                $event->get_course_module()->get('modname'),
-                ['id' => $event->get_course_module()->get('instance')],
-                '*',
-                MUST_EXIST
-            );
-
-            // If there is a timestart range callback implemented then we can
-            // use the values returned from the valid timestart range to apply
-            // some default validation on the event's timestart value to ensure
-            // that it falls within the specified range.
-            list($min, $max) = component_callback(
-                'mod_' . $event->get_course_module()->get('modname'),
-                'core_calendar_get_valid_event_timestart_range',
-                [$legacyevent, $moduleinstance],
-                [false, false]
-            );
-        } else if ($legacyevent->courseid != 0 && $legacyevent->courseid != SITEID && $legacyevent->groupid == 0) {
-            // This is a course event.
-            list($min, $max) = component_callback(
-                'core_course',
-                'core_calendar_get_valid_event_timestart_range',
-                [$legacyevent, $event->get_course()->get_proxied_instance()],
-                [0, 0]
-            );
-        } else {
-            $min = $max = 0;
-        }
-
-        // If the callback returns false for either value it means that
-        // there is no valid time start range.
-        if ($min === false || $max === false) {
-            throw new \moodle_exception('The start day of this event can not be modified');
-        }
-
-        if ($min && $starttimestamp < $min[0]) {
-            throw new \moodle_exception($min[1]);
-        }
-
-        if ($max && $starttimestamp > $max[0]) {
-            throw new \moodle_exception($max[1]);
-        }
-
-        // This function does our capability checks.
-        $legacyevent->update((object) ['timestart' => $starttime->getTimestamp()]);
-
-        // Check that the user is allowed to manually edit calendar events before
-        // calling the event updated callback. The manual flag causes the code to
-        // check the user has the capabilities to modify the modules.
-        //
-        // We don't want to call the event update callback if the user isn't allowed
-        // to modify course modules because depending on the callback it can make
-        // some changes that would be considered security issues, such as updating the
-        // due date for an assignment.
-        if ($hascoursemodule && calendar_edit_event_allowed($legacyevent, true)) {
-            // If this event is from an activity then we need to call
-            // the activity callback to let it know that the event it
-            // created has been modified so it needs to update accordingly.
-            component_callback(
-                'mod_' . $event->get_course_module()->get('modname'),
-                'core_calendar_event_timestart_updated',
-                [$legacyevent, $moduleinstance]
-            );
-
-            // Rebuild the course cache to make sure the updated dates are reflected.
-            $courseid = $event->get_course()->get('id');
-            $cmid = $event->get_course_module()->get('id');
-            \course_modinfo::purge_course_module_cache($courseid, $cmid);
-            rebuild_course_cache($courseid, true, true);
-        }
-
-        return $mapper->from_legacy_event_to_event($legacyevent);
+        $updater = \core\di::get(event_start_day_updater::class);
+        return $updater->update($event, $startdate);
     }
 }

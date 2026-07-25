@@ -28,17 +28,11 @@ defined('MOODLE_INTERNAL') || die;
 
 require_once($CFG->dirroot . '/calendar/lib.php');
 
-use core_calendar\local\api as local_api;
-use core_calendar\local\event\data_access\event_vault_factory;
-use core_calendar\local\event\exceptions\limit_invalid_parameter_exception;
-use core_calendar\local\event\forms\create as create_event_form;
-use core_calendar\local\event\forms\update as update_event_form;
-use core_calendar\local\event\mappers\create_update_form_mapper;
-use core_calendar\local\event\mappers\event_mapper;
+use core_calendar\external\event_controller;
 use core_calendar\external\event_exporter;
 use core_calendar\external\events_exporter;
 use core_calendar\external\events_grouped_by_course_exporter;
-use core_calendar\external\events_related_objects_cache;
+use core_calendar\local\event\exceptions\limit_invalid_parameter_exception;
 use core_external\external_api;
 use core_external\external_format_value;
 use core_external\external_function_parameters;
@@ -414,18 +408,25 @@ class core_calendar_external extends external_api {
      * @return external_function_parameters
      */
     public static function get_calendar_action_events_by_timesort_parameters() {
-        return new external_function_parameters(
-            array(
-                'timesortfrom' => new external_value(PARAM_INT, 'Time sort from', VALUE_DEFAULT, 0),
-                'timesortto' => new external_value(PARAM_INT, 'Time sort to', VALUE_DEFAULT, null),
-                'aftereventid' => new external_value(PARAM_INT, 'The last seen event id', VALUE_DEFAULT, 0),
-                'limitnum' => new external_value(PARAM_INT, 'Limit number', VALUE_DEFAULT, 20),
-                'limittononsuspendedevents' => new external_value(PARAM_BOOL,
-                        'Limit the events to courses the user is not suspended in', VALUE_DEFAULT, false),
-                'userid' => new external_value(PARAM_INT, 'The user id', VALUE_DEFAULT, null),
-                'searchvalue' => new external_value(PARAM_RAW, 'The value a user wishes to search against', VALUE_DEFAULT, null)
-            )
-        );
+        return new external_function_parameters([
+            'timesortfrom' => new external_value(PARAM_INT, 'Time sort from', VALUE_DEFAULT, 0),
+            'timesortto' => new external_value(PARAM_INT, 'Time sort to', VALUE_DEFAULT, null),
+            'aftereventid' => new external_value(PARAM_INT, 'The last seen event id', VALUE_DEFAULT, 0),
+            'limitnum' => new external_value(PARAM_INT, 'Limit number', VALUE_DEFAULT, 20),
+            'limittononsuspendedevents' => new external_value(
+                PARAM_BOOL,
+                'Limit the events to courses the user is not suspended in',
+                VALUE_DEFAULT,
+                false,
+            ),
+            'userid' => new external_value(PARAM_INT, 'The user id', VALUE_DEFAULT, null),
+            'searchvalue' => new external_value(
+                PARAM_RAW,
+                'The value a user wishes to search against',
+                VALUE_DEFAULT,
+                null,
+            ),
+        ]);
     }
 
     /**
@@ -440,38 +441,37 @@ class core_calendar_external extends external_api {
      * @param string|null $searchvalue The value a user wishes to search against
      * @return array
      */
-    public static function get_calendar_action_events_by_timesort($timesortfrom = 0, $timesortto = null,
-                                                       $aftereventid = 0, $limitnum = 20, $limittononsuspendedevents = false,
-                                                       $userid = null, ?string $searchvalue = null) {
+    public static function get_calendar_action_events_by_timesort(
+        $timesortfrom = 0,
+        $timesortto = null,
+        $aftereventid = 0,
+        $limitnum = 20,
+        $limittononsuspendedevents = false,
+        $userid = null,
+        ?string $searchvalue = null,
+    ) {
         global $PAGE, $USER;
 
-        $params = self::validate_parameters(
-            self::get_calendar_action_events_by_timesort_parameters(),
-            [
-                'timesortfrom' => $timesortfrom,
-                'timesortto' => $timesortto,
-                'aftereventid' => $aftereventid,
-                'limitnum' => $limitnum,
-                'limittononsuspendedevents' => $limittononsuspendedevents,
-                'userid' => $userid,
-                'searchvalue' => $searchvalue
-            ]
-        );
-        if ($params['userid']) {
-            $user = \core_user::get_user($params['userid']);
-        } else {
-            $user = $USER;
-        }
+        $params = self::validate_parameters(self::get_calendar_action_events_by_timesort_parameters(), [
+            'timesortfrom' => $timesortfrom,
+            'timesortto' => $timesortto,
+            'aftereventid' => $aftereventid,
+            'limitnum' => $limitnum,
+            'limittononsuspendedevents' => $limittononsuspendedevents,
+            'userid' => $userid,
+            'searchvalue' => $searchvalue,
+        ]);
 
+        $user = $params['userid'] ? \core_user::get_user($params['userid']) : $USER;
         $context = \context_user::instance($user->id);
         self::validate_context($context);
 
-        if ($params['userid'] && $USER->id !== $params['userid'] && !has_capability('moodle/calendar:manageentries', $context)) {
+        if (
+            $params['userid']
+            && $USER->id !== $params['userid']
+            && !has_capability('moodle/calendar:manageentries', $context)
+        ) {
             throw new \required_capability_exception($context, 'moodle/calendar:manageentries', 'nopermission', '');
-        }
-
-        if (empty($params['aftereventid'])) {
-            $params['aftereventid'] = null;
         }
 
         if ($params['timesortfrom'] === null && $params['timesortto'] === null) {
@@ -483,27 +483,17 @@ class core_calendar_external extends external_api {
         }
 
         // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Web service entry point.
-        $vault = \core\di::get(event_vault_factory::class)->create($user->id);
-        $afterevent = null;
-        if ($params['aftereventid'] && $event = $vault->get_event_by_id($params['aftereventid'])) {
-            $afterevent = $event;
-        }
-
-        $renderer = $PAGE->get_renderer('core_calendar');
-        $events = $vault->get_action_events_by_timesort(
+        $controller = \core\di::get(event_controller::class);
+        return $controller->get_action_events_by_timesort(
             $user,
             $params['timesortfrom'],
             $params['timesortto'],
-            $afterevent,
+            empty($params['aftereventid']) ? null : $params['aftereventid'],
             $params['limitnum'],
             $params['limittononsuspendedevents'],
             clean_param($params['searchvalue'], PARAM_TEXT),
+            $PAGE->get_renderer('core_calendar'),
         );
-
-        $exportercache = new events_related_objects_cache($events);
-        $exporter = new events_exporter($events, ['cache' => $exportercache]);
-
-        return $exporter->export($renderer);
     }
 
     /**
@@ -522,16 +512,19 @@ class core_calendar_external extends external_api {
      * @return external_function_parameters
      */
     public static function get_calendar_action_events_by_course_parameters() {
-        return new external_function_parameters(
-            array(
-                'courseid' => new external_value(PARAM_INT, 'Course id'),
-                'timesortfrom' => new external_value(PARAM_INT, 'Time sort from', VALUE_DEFAULT, null),
-                'timesortto' => new external_value(PARAM_INT, 'Time sort to', VALUE_DEFAULT, null),
-                'aftereventid' => new external_value(PARAM_INT, 'The last seen event id', VALUE_DEFAULT, 0),
-                'limitnum' => new external_value(PARAM_INT, 'Limit number', VALUE_DEFAULT, 20),
-                'searchvalue' => new external_value(PARAM_RAW, 'The value a user wishes to search against', VALUE_DEFAULT, null)
-            )
-        );
+        return new external_function_parameters([
+            'courseid' => new external_value(PARAM_INT, 'Course id'),
+            'timesortfrom' => new external_value(PARAM_INT, 'Time sort from', VALUE_DEFAULT, null),
+            'timesortto' => new external_value(PARAM_INT, 'Time sort to', VALUE_DEFAULT, null),
+            'aftereventid' => new external_value(PARAM_INT, 'The last seen event id', VALUE_DEFAULT, 0),
+            'limitnum' => new external_value(PARAM_INT, 'Limit number', VALUE_DEFAULT, 20),
+            'searchvalue' => new external_value(
+                PARAM_RAW,
+                'The value a user wishes to search against',
+                VALUE_DEFAULT,
+                null,
+            ),
+        ]);
     }
 
     /**
@@ -547,32 +540,26 @@ class core_calendar_external extends external_api {
      * @return array
      */
     public static function get_calendar_action_events_by_course(
-        $courseid, $timesortfrom = null, $timesortto = null, $aftereventid = 0, $limitnum = 20, ?string $searchvalue = null) {
-
+        $courseid,
+        $timesortfrom = null,
+        $timesortto = null,
+        $aftereventid = 0,
+        $limitnum = 20,
+        ?string $searchvalue = null,
+    ) {
         global $PAGE, $USER;
 
-        $user = null;
-        $params = self::validate_parameters(
-            self::get_calendar_action_events_by_course_parameters(),
-            [
-                'courseid' => $courseid,
-                'timesortfrom' => $timesortfrom,
-                'timesortto' => $timesortto,
-                'aftereventid' => $aftereventid,
-                'limitnum' => $limitnum,
-                'searchvalue' => $searchvalue
-            ]
-        );
-        $context = \context_user::instance($USER->id);
-        self::validate_context($context);
+        $params = self::validate_parameters(self::get_calendar_action_events_by_course_parameters(), [
+            'courseid' => $courseid,
+            'timesortfrom' => $timesortfrom,
+            'timesortto' => $timesortto,
+            'aftereventid' => $aftereventid,
+            'limitnum' => $limitnum,
+            'searchvalue' => $searchvalue,
+        ]);
+        self::validate_context(\context_user::instance($USER->id));
 
-        if (empty($params['aftereventid'])) {
-            $params['aftereventid'] = null;
-        }
-
-        $courses = enrol_get_my_courses('*', null, 0, [$courseid]);
-        $courses = array_values($courses);
-
+        $courses = array_values(enrol_get_my_courses('*', null, 0, [$params['courseid']]));
         if (empty($courses)) {
             return [];
         }
@@ -582,28 +569,17 @@ class core_calendar_external extends external_api {
         }
 
         // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Web service entry point.
-        $vault = \core\di::get(event_vault_factory::class)->create($USER->id);
-        $afterevent = null;
-        if ($params['aftereventid'] && $event = $vault->get_event_by_id($params['aftereventid'])) {
-            $afterevent = $event;
-        }
-
-        $course = $courses[0];
-        $renderer = $PAGE->get_renderer('core_calendar');
-        $events = $vault->get_action_events_by_course(
+        $controller = \core\di::get(event_controller::class);
+        return $controller->get_action_events_by_course(
             $USER,
-            $course,
+            $courses[0],
             $params['timesortfrom'],
             $params['timesortto'],
-            $afterevent,
+            empty($params['aftereventid']) ? null : $params['aftereventid'],
             $params['limitnum'],
             clean_param($params['searchvalue'], PARAM_TEXT),
+            $PAGE->get_renderer('core_calendar'),
         );
-
-        $exportercache = new events_related_objects_cache($events, $courses);
-        $exporter = new events_exporter($events, ['cache' => $exportercache]);
-
-        return $exporter->export($renderer);
     }
 
     /**
@@ -621,17 +597,20 @@ class core_calendar_external extends external_api {
      * @return external_function_parameters
      */
     public static function get_calendar_action_events_by_courses_parameters() {
-        return new external_function_parameters(
-            array(
-                'courseids' => new external_multiple_structure(
-                    new external_value(PARAM_INT, 'Course id')
-                ),
-                'timesortfrom' => new external_value(PARAM_INT, 'Time sort from', VALUE_DEFAULT, null),
-                'timesortto' => new external_value(PARAM_INT, 'Time sort to', VALUE_DEFAULT, null),
-                'limitnum' => new external_value(PARAM_INT, 'Limit number', VALUE_DEFAULT, 10),
-                'searchvalue' => new external_value(PARAM_RAW, 'The value a user wishes to search against', VALUE_DEFAULT, null)
-            )
-        );
+        return new external_function_parameters([
+            'courseids' => new external_multiple_structure(
+                new external_value(PARAM_INT, 'Course id'),
+            ),
+            'timesortfrom' => new external_value(PARAM_INT, 'Time sort from', VALUE_DEFAULT, null),
+            'timesortto' => new external_value(PARAM_INT, 'Time sort to', VALUE_DEFAULT, null),
+            'limitnum' => new external_value(PARAM_INT, 'Limit number', VALUE_DEFAULT, 10),
+            'searchvalue' => new external_value(
+                PARAM_RAW,
+                'The value a user wishes to search against',
+                VALUE_DEFAULT,
+                null,
+            ),
+        ]);
     }
 
     /**
@@ -646,32 +625,28 @@ class core_calendar_external extends external_api {
      * @return array
      */
     public static function get_calendar_action_events_by_courses(
-        array $courseids, $timesortfrom = null, $timesortto = null, $limitnum = 10, ?string $searchvalue = null) {
-
+        array $courseids,
+        $timesortfrom = null,
+        $timesortto = null,
+        $limitnum = 10,
+        ?string $searchvalue = null,
+    ) {
         global $PAGE, $USER;
 
-        $user = null;
-        $params = self::validate_parameters(
-            self::get_calendar_action_events_by_courses_parameters(),
-            [
-                'courseids' => $courseids,
-                'timesortfrom' => $timesortfrom,
-                'timesortto' => $timesortto,
-                'limitnum' => $limitnum,
-                'searchvalue' => $searchvalue
-            ]
-        );
-        $context = \context_user::instance($USER->id);
-        self::validate_context($context);
+        $params = self::validate_parameters(self::get_calendar_action_events_by_courses_parameters(), [
+            'courseids' => $courseids,
+            'timesortfrom' => $timesortfrom,
+            'timesortto' => $timesortto,
+            'limitnum' => $limitnum,
+            'searchvalue' => $searchvalue,
+        ]);
+        self::validate_context(\context_user::instance($USER->id));
 
         if (empty($params['courseids'])) {
             return ['groupedbycourse' => []];
         }
 
-        $renderer = $PAGE->get_renderer('core_calendar');
-        $courses = enrol_get_my_courses('*', null, 0, $params['courseids']);
-        $courses = array_values($courses);
-
+        $courses = array_values(enrol_get_my_courses('*', null, 0, $params['courseids']));
         if (empty($courses)) {
             return ['groupedbycourse' => []];
         }
@@ -681,29 +656,16 @@ class core_calendar_external extends external_api {
         }
 
         // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Web service entry point.
-        $vault = \core\di::get(event_vault_factory::class)->create($USER->id);
-        $searchvalue = clean_param($params['searchvalue'], PARAM_TEXT);
-        $events = [];
-        foreach ($courses as $course) {
-            $events[$course->id] = $vault->get_action_events_by_course(
-                $USER,
-                $course,
-                $params['timesortfrom'],
-                $params['timesortto'],
-                null,
-                $params['limitnum'],
-                $searchvalue,
-            );
-        }
-
-        if (empty($events)) {
-            return ['groupedbycourse' => []];
-        }
-
-        $exportercache = new events_related_objects_cache($events, $courses);
-        $exporter = new events_grouped_by_course_exporter($events, ['cache' => $exportercache]);
-
-        return $exporter->export($renderer);
+        $controller = \core\di::get(event_controller::class);
+        return $controller->get_action_events_by_courses(
+            $USER,
+            $courses,
+            $params['timesortfrom'],
+            $params['timesortto'],
+            $params['limitnum'],
+            clean_param($params['searchvalue'], PARAM_TEXT),
+            $PAGE->get_renderer('core_calendar'),
+        );
     }
 
     /**
@@ -846,11 +808,9 @@ class core_calendar_external extends external_api {
      * @return external_function_parameters
      */
     public static function get_calendar_event_by_id_parameters() {
-        return new external_function_parameters(
-            array(
-                'eventid' => new external_value(PARAM_INT, 'The event id to be retrieved'),
-            )
-        );
+        return new external_function_parameters([
+            'eventid' => new external_value(PARAM_INT, 'The event id to be retrieved'),
+        ]);
     }
 
     /**
@@ -863,39 +823,15 @@ class core_calendar_external extends external_api {
         global $PAGE, $USER;
 
         $params = self::validate_parameters(self::get_calendar_event_by_id_parameters(), ['eventid' => $eventid]);
-        $context = \context_user::instance($USER->id);
-
-        self::validate_context($context);
-        $warnings = array();
+        self::validate_context(\context_user::instance($USER->id));
 
         // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Web service entry point.
-        $eventvault = \core\di::get(event_vault_factory::class)->create($USER->id);
-        $event = $eventvault->get_event_by_id($params['eventid']);
-        if ($event) {
-            // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Web service entry point.
-            $mapper = \core\di::get(event_mapper::class);
-            if (!calendar_view_event_allowed($mapper->from_event_to_legacy_event($event))) {
-                throw new moodle_exception('nopermissiontoviewcalendar', 'error');
-            }
-        }
-
-        if (!$event) {
-            // We can't return a warning in this case because the event is not optional.
-            // We don't know the context for the event and it's not worth loading it.
-            $syscontext = context_system::instance();
-            throw new \required_capability_exception($syscontext, 'moodle/course:view', 'nopermissions', 'error');
-        }
-
-        $cache = new events_related_objects_cache([$event]);
-        $relatedobjects = [
-            'context' => $cache->get_context($event),
-            'course' => $cache->get_course($event),
-        ];
-
-        $exporter = new event_exporter($event, $relatedobjects);
-        $renderer = $PAGE->get_renderer('core_calendar');
-
-        return array('event' => $exporter->export($renderer), 'warnings' => $warnings);
+        $controller = \core\di::get(event_controller::class);
+        return $controller->get_calendar_event_by_id(
+            $USER->id,
+            $params['eventid'],
+            $PAGE->get_renderer('core_calendar'),
+        );
     }
 
     /**
@@ -904,13 +840,10 @@ class core_calendar_external extends external_api {
      * @return \core_external\external_description
      */
     public static function get_calendar_event_by_id_returns() {
-        $eventstructure = event_exporter::get_read_structure();
-
-        return new external_single_structure(array(
-            'event' => $eventstructure,
-            'warnings' => new external_warnings()
-            )
-        );
+        return new external_single_structure([
+            'event' => event_exporter::get_read_structure(),
+            'warnings' => new external_warnings(),
+        ]);
     }
 
     /**
@@ -919,11 +852,9 @@ class core_calendar_external extends external_api {
      * @return external_function_parameters.
      */
     public static function submit_create_update_form_parameters() {
-        return new external_function_parameters(
-            [
-                'formdata' => new external_value(PARAM_RAW, 'The data from the event form'),
-            ]
-        );
+        return new external_function_parameters([
+            'formdata' => new external_value(PARAM_RAW, 'The data from the event form'),
+        ]);
     }
 
     /**
@@ -934,117 +865,19 @@ class core_calendar_external extends external_api {
      * @throws moodle_exception
      */
     public static function submit_create_update_form($formdata) {
-        global $USER, $PAGE, $CFG;
-        require_once($CFG->libdir."/filelib.php");
+        global $PAGE, $USER;
 
-        // Parameter validation.
         $params = self::validate_parameters(self::submit_create_update_form_parameters(), ['formdata' => $formdata]);
         $context = \context_user::instance($USER->id);
-        $data = [];
-
         self::validate_context($context);
-        parse_str($params['formdata'], $data);
 
-        if (WS_SERVER) {
-            // Request via WS, ignore sesskey checks in form library.
-            $USER->ignoresesskey = true;
-        }
-
-        $eventtype = isset($data['eventtype']) ? $data['eventtype'] : null;
-        $coursekey = ($eventtype == 'group') ? 'groupcourseid' : 'courseid';
-        $courseid = (!empty($data[$coursekey])) ? $data[$coursekey] : null;
-        $editoroptions = \core_calendar\local\event\forms\create::build_editor_options($context);
-        $formoptions = ['editoroptions' => $editoroptions, 'courseid' => $courseid];
-        $allowedeeventtypes = calendar_get_allowed_event_types($courseid);
-
-        // Event type validation.
-        if (in_array(true, $allowedeeventtypes, true) === false) {
-            throw new \moodle_exception('nopermissiontoupdatecalendar');
-        }
-        if (empty($eventtype) || !isset($allowedeeventtypes[$eventtype]) || $allowedeeventtypes[$eventtype] == false) {
-            return ['validationerror' => true];
-        }
-
-        $formoptions['eventtypes'] = $allowedeeventtypes;
-        if ($courseid) {
-            require_once($CFG->libdir . '/grouplib.php');
-            $groupcoursedata = groups_get_all_groups($courseid);
-            if (!empty($groupcoursedata)) {
-                $formoptions['groups'] = [];
-                foreach ($groupcoursedata as $groupid => $groupdata) {
-                    $formoptions['groups'][$groupid] = $groupdata->name;
-                }
-            }
-        }
-
-        if (!empty($data['id'])) {
-            $eventid = clean_param($data['id'], PARAM_INT);
-            $legacyevent = calendar_event::load($eventid);
-            $legacyevent->count_repeats();
-            $formoptions['event'] = $legacyevent;
-            $mform = new update_event_form(null, $formoptions, 'post', '', null, true, $data);
-        } else {
-            $legacyevent = null;
-            $mform = new create_event_form(null, $formoptions, 'post', '', null, true, $data);
-        }
-
-        if ($validateddata = $mform->get_data()) {
-            $formmapper = new create_update_form_mapper();
-            $properties = $formmapper->from_data_to_event_properties($validateddata);
-
-            if (is_null($legacyevent)) {
-                $legacyevent = new \calendar_event($properties);
-                // Need to do this in order to initialise the description
-                // property which then triggers the update function below
-                // to set the appropriate default properties on the event.
-                $properties = $legacyevent->properties(true);
-            }
-
-            if (!calendar_edit_event_allowed($legacyevent, true)) {
-                throw new \moodle_exception('nopermissiontoupdatecalendar');
-            }
-
-            $legacyevent->update($properties);
-            $eventcontext = $legacyevent->context;
-
-            file_remove_editor_orphaned_files($validateddata->description);
-
-            // Take any files added to the description draft file area and
-            // convert them into the proper event description file area. Also
-            // parse the description text and replace the URLs to the draft files
-            // with the @@PLUGIN_FILE@@ placeholder to be persisted in the DB.
-            $description = file_save_draft_area_files(
-                $validateddata->description['itemid'],
-                $eventcontext->id,
-                'calendar',
-                'event_description',
-                $legacyevent->id,
-                create_event_form::build_editor_options($eventcontext),
-                $validateddata->description['text']
-            );
-
-            // If draft files were found then we need to save the new
-            // description value.
-            if ($description != $validateddata->description['text']) {
-                $properties->id = $legacyevent->id;
-                $properties->description = $description;
-                $legacyevent->update($properties);
-            }
-
-            // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Web service entry point.
-            $event = \core\di::get(event_mapper::class)->from_legacy_event_to_event($legacyevent);
-            $cache = new events_related_objects_cache([$event]);
-            $relatedobjects = [
-                'context' => $cache->get_context($event),
-                'course' => $cache->get_course($event),
-            ];
-            $exporter = new event_exporter($event, $relatedobjects);
-            $renderer = $PAGE->get_renderer('core_calendar');
-
-            return [ 'event' => $exporter->export($renderer) ];
-        } else {
-            return [ 'validationerror' => true ];
-        }
+        // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Web service entry point.
+        $controller = \core\di::get(event_controller::class);
+        return $controller->submit_create_update_form(
+            $params['formdata'],
+            $context,
+            $PAGE->get_renderer('core_calendar'),
+        );
     }
 
     /**
@@ -1056,12 +889,10 @@ class core_calendar_external extends external_api {
         $eventstructure = event_exporter::get_read_structure();
         $eventstructure->required = VALUE_OPTIONAL;
 
-        return new external_single_structure(
-            array(
-                'event' => $eventstructure,
-                'validationerror' => new external_value(PARAM_BOOL, 'Invalid form data', VALUE_DEFAULT, false),
-            )
-        );
+        return new external_single_structure([
+            'event' => $eventstructure,
+            'validationerror' => new external_value(PARAM_BOOL, 'Invalid form data', VALUE_DEFAULT, false),
+        ]);
     }
 
     /**
@@ -1225,12 +1056,10 @@ class core_calendar_external extends external_api {
      * @return external_function_parameters
      */
     public static function update_event_start_day_parameters() {
-        return new external_function_parameters(
-            [
-                'eventid' => new external_value(PARAM_INT, 'Id of event to be updated', VALUE_REQUIRED),
-                'daytimestamp' => new external_value(PARAM_INT, 'Timestamp for the new start day', VALUE_REQUIRED),
-            ]
-        );
+        return new external_function_parameters([
+            'eventid' => new external_value(PARAM_INT, 'Id of event to be updated', VALUE_REQUIRED),
+            'daytimestamp' => new external_value(PARAM_INT, 'Timestamp for the new start day', VALUE_REQUIRED),
+        ]);
     }
 
     /**
@@ -1247,45 +1076,21 @@ class core_calendar_external extends external_api {
      * @return  array
      */
     public static function update_event_start_day($eventid, $daytimestamp) {
-        global $USER, $PAGE;
+        global $PAGE, $USER;
 
-        // Parameter validation.
         $params = self::validate_parameters(self::update_event_start_day_parameters(), [
             'eventid' => $eventid,
             'daytimestamp' => $daytimestamp,
         ]);
 
         // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Web service entry point.
-        $vault = \core\di::get(event_vault_factory::class)->create($USER->id);
-        // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Web service entry point.
-        $mapper = \core\di::get(event_mapper::class);
-        $event = $vault->get_event_by_id($eventid);
-
-        if (!$event) {
-            throw new \moodle_exception('Unable to find event with id ' . $eventid);
-        }
-
-        $legacyevent = $mapper->from_event_to_legacy_event($event);
-
-        if (!calendar_edit_event_allowed($legacyevent, true)) {
-            throw new \moodle_exception('nopermissiontoupdatecalendar');
-        }
-
-        self::validate_context($legacyevent->context);
-
-        $newdate = usergetdate($daytimestamp);
-        $startdatestring = implode('-', [$newdate['year'], $newdate['mon'], $newdate['mday']]);
-        $startdate = new DateTimeImmutable($startdatestring);
-        $event = local_api::update_event_start_day($event, $startdate);
-        $cache = new events_related_objects_cache([$event]);
-        $relatedobjects = [
-            'context' => $cache->get_context($event),
-            'course' => $cache->get_course($event),
-        ];
-        $exporter = new event_exporter($event, $relatedobjects);
-        $renderer = $PAGE->get_renderer('core_calendar');
-
-        return array('event' => $exporter->export($renderer));
+        $controller = \core\di::get(event_controller::class);
+        return $controller->update_event_start_day(
+            $USER->id,
+            $params['eventid'],
+            $params['daytimestamp'],
+            $PAGE->get_renderer('core_calendar'),
+        );
     }
 
     /**
@@ -1294,11 +1099,9 @@ class core_calendar_external extends external_api {
      * @return \core_external\external_description
      */
     public static function update_event_start_day_returns() {
-        return new external_single_structure(
-            array(
-                'event' => event_exporter::get_read_structure()
-            )
-        );
+        return new external_single_structure([
+            'event' => event_exporter::get_read_structure(),
+        ]);
     }
 
     /**
