@@ -17,7 +17,10 @@
 namespace core_calendar;
 
 use core_calendar\external\calendar_event_exporter;
-use core_calendar\local\event\container;
+use core_calendar\external\events_exporter;
+use core_calendar\external\events_related_objects_cache;
+use core_calendar\local\event\mappers\event_mapper;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 defined('MOODLE_INTERNAL') || die();
 require_once(__DIR__ . '/helpers.php');
@@ -29,6 +32,8 @@ require_once(__DIR__ . '/helpers.php');
  * @copyright 2017 Ryan Wyllie <ryan@moodle.com>
  * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+#[CoversClass(calendar_event_exporter::class)]
+#[CoversClass(events_exporter::class)]
 final class calendar_event_exporter_test extends \advanced_testcase {
     /**
      * Data provider for the timestamp min limit test case to confirm
@@ -156,7 +161,7 @@ final class calendar_event_exporter_test extends \advanced_testcase {
         $course = $generator->create_course();
         $context = \context_course::instance($course->id);
         $now = time();
-        $mapper = container::get_event_mapper();
+        $mapper = \core\di::get(event_mapper::class);
         $legacyevent = create_event([
             'courseid' => $course->id,
             'userid' => 1,
@@ -164,14 +169,21 @@ final class calendar_event_exporter_test extends \advanced_testcase {
             'timestart' => $now
         ]);
         $event = $mapper->from_legacy_event_to_event($legacyevent);
+        $injectedmapper = $this->createMock(event_mapper::class);
+        $injectedmapper->expects($this->atLeastOnce())
+            ->method('from_event_to_legacy_event')
+            ->with($event)
+            ->willReturnCallback(
+                static fn($mappedevent): \calendar_event => $mapper->from_event_to_legacy_event($mappedevent),
+            );
         $exporter = new calendar_event_exporter($event, [
             'context' => $context,
             'course' => $course,
             'moduleinstance' => null,
             'daylink' => new \moodle_url(''),
             'type' => type_factory::get_calendar_instance(),
-            'today' => $now
-        ]);
+            'today' => $now,
+        ], $injectedmapper);
 
         $courseurl = course_get_url($course->id);
         $expected = $courseurl->out(false);
@@ -195,7 +207,7 @@ final class calendar_event_exporter_test extends \advanced_testcase {
         $user = $generator->create_user();
         $context = \context_user::instance($user->id);
         $now = time();
-        $mapper = container::get_event_mapper();
+        $mapper = \core\di::get(event_mapper::class);
         $legacyevent = create_event([
             'courseid' => 0,
             'userid' => $user->id,
@@ -236,7 +248,7 @@ final class calendar_event_exporter_test extends \advanced_testcase {
         $course = $generator->create_course(['shortname' => $rawshortname]);
         $coursecontext = \context_course::instance($course->id);
         $now = time();
-        $mapper = container::get_event_mapper();
+        $mapper = \core\di::get(event_mapper::class);
         $renderer = $PAGE->get_renderer('core_calendar');
         $legacyevent = create_event([
             'courseid' => $course->id,
@@ -274,7 +286,7 @@ final class calendar_event_exporter_test extends \advanced_testcase {
         $course = $generator->create_course(['shortname' => $rawshortname]);
         $coursecontext = \context_course::instance($course->id);
         $now = time();
-        $mapper = container::get_event_mapper();
+        $mapper = \core\di::get(event_mapper::class);
         $renderer = $PAGE->get_renderer('core_calendar');
         $legacyevent = create_event([
             'courseid' => $course->id,
@@ -298,5 +310,30 @@ final class calendar_event_exporter_test extends \advanced_testcase {
         ]);
         $exportedcourse = $courseexporter->export($renderer);
         $this->assertEquals($exportedevent->course, $exportedcourse);
+    }
+
+    /**
+     * Existing direct exporter construction remains compatible when no mapper is supplied.
+     */
+    public function test_events_exporter_supports_existing_related_data(): void {
+        global $PAGE;
+
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $mapper = \core\di::get(event_mapper::class);
+        $legacyevent = create_event([
+            'courseid' => $course->id,
+            'eventtype' => 'course',
+        ]);
+        $event = $mapper->from_legacy_event_to_event($legacyevent);
+
+        $exporter = new events_exporter([$event], [
+            'cache' => new events_related_objects_cache([$event]),
+        ]);
+
+        $exported = $exporter->export($PAGE->get_renderer('core_calendar'));
+        $this->assertCount(1, $exported->events);
     }
 }

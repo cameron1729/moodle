@@ -44,7 +44,11 @@ class week_day_exporter extends day_exporter {
      * @param mixed $data Either an stdClass or an array of values.
      * @param array $related Related objects.
      */
-    public function __construct(\calendar_information $calendar, $data, $related) {
+    public function __construct(
+        \calendar_information $calendar,
+        $data,
+        $related,
+    ) {
         parent::__construct($calendar, $data, $related);
         // Fix the url for today to be based on the today timestamp
         // rather than the calendar_information time set in the parent
@@ -121,6 +125,7 @@ class week_day_exporter extends day_exporter {
             'events' => '\core_calendar\local\event\entities\event_interface[]',
             'cache' => '\core_calendar\external\events_related_objects_cache',
             'type' => '\core_calendar\type_base',
+            'eventpresenter' => '\core_calendar\presenter\event?',
         ];
     }
 

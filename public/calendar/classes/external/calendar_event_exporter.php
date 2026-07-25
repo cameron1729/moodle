@@ -26,7 +26,9 @@ namespace core_calendar\external;
 
 defined('MOODLE_INTERNAL') || die();
 
-use \core_calendar\local\event\container;
+use core_calendar\local\event\entities\event_interface;
+use core_calendar\local\event\factories\event_entity_factory;
+use core_calendar\local\event\mappers\event_mapper;
 use \renderer_base;
 require_once($CFG->dirroot . '/course/lib.php');
 /**
@@ -37,6 +39,26 @@ require_once($CFG->dirroot . '/course/lib.php');
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class calendar_event_exporter extends event_exporter_base {
+    /** @var event_mapper Event mapper used for legacy callback compatibility. */
+    private readonly event_mapper $calendareventmapper;
+
+    /**
+     * Constructor.
+     *
+     * @param event_interface $event The event.
+     * @param array $related Related data.
+     * @param event_mapper|null $eventmapper Event mapper.
+     */
+    public function __construct(
+        event_interface $event,
+        $related = [],
+        ?event_mapper $eventmapper = null,
+    ) {
+        $this->calendareventmapper = $eventmapper ?? new event_mapper(new event_entity_factory());
+
+        parent::__construct($event, $related, $this->calendareventmapper);
+    }
+
 
     /**
      * Return the list of additional properties.
@@ -223,13 +245,12 @@ class calendar_event_exporter extends event_exporter_base {
      */
     protected function get_course_timestamp_limits($event) {
         $values = [];
-        $mapper = container::get_event_mapper();
         $starttime = $event->get_times()->get_start_time();
 
         list($min, $max) = component_callback(
             'core_course',
             'core_calendar_get_valid_event_timestart_range',
-            [$mapper->from_event_to_legacy_event($event), $event->get_course()->get_proxied_instance()],
+            [$this->calendareventmapper->from_event_to_legacy_event($event), $event->get_course()->get_proxied_instance()],
             [false, false]
         );
 
@@ -261,7 +282,6 @@ class calendar_event_exporter extends event_exporter_base {
      */
     protected function get_module_timestamp_limits($event) {
         $values = [];
-        $mapper = container::get_event_mapper();
         $starttime = $event->get_times()->get_start_time();
         $modname = $event->get_course_module()->get('modname');
         $moduleinstance = $this->related['moduleinstance'];
@@ -269,7 +289,7 @@ class calendar_event_exporter extends event_exporter_base {
         list($min, $max) = component_callback(
             'mod_' . $modname,
             'core_calendar_get_valid_event_timestart_range',
-            [$mapper->from_event_to_legacy_event($event), $moduleinstance],
+            [$this->calendareventmapper->from_event_to_legacy_event($event), $moduleinstance],
             [false, false]
         );
 

@@ -67,12 +67,17 @@ class week_exporter extends exporter {
      * @param int $postpadding The number of post-padding days at the start of the week.
      * @param array $related Related objects.
      */
-    public function __construct(\calendar_information $calendar, $days, $prepadding, $postpadding, $related) {
+    public function __construct(
+        \calendar_information $calendar,
+        $days,
+        $prepadding,
+        $postpadding,
+        $related,
+    ) {
         $this->days = $days;
         $this->prepadding = $prepadding;
         $this->postpadding = $postpadding;
         $this->calendar = $calendar;
-
         parent::__construct([], $related);
     }
 
@@ -159,6 +164,7 @@ class week_exporter extends exporter {
                 'events' => $events,
                 'cache' => $this->related['cache'],
                 'type' => $this->related['type'],
+                'eventpresenter' => $this->related['eventpresenter'],
             ]);
 
             $return['days'][] = $day->export($output);
@@ -177,6 +183,7 @@ class week_exporter extends exporter {
             'events' => '\core_calendar\local\event\entities\event_interface[]',
             'cache' => '\core_calendar\external\events_related_objects_cache',
             'type' => '\core_calendar\type_base',
+            'eventpresenter' => '\core_calendar\presenter\event?',
         ];
     }
 }

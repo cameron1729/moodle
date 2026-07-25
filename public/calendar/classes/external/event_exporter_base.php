@@ -30,9 +30,10 @@ require_once($CFG->dirroot . "/calendar/lib.php");
 require_once($CFG->libdir . "/filelib.php");
 
 use core\external\exporter;
-use core_calendar\local\event\container;
-use core_calendar\local\event\entities\event_interface;
 use core_calendar\local\event\entities\action_event_interface;
+use core_calendar\local\event\entities\event_interface;
+use core_calendar\local\event\factories\event_entity_factory;
+use core_calendar\local\event\mappers\event_mapper;
 use core_calendar\output\humantimeperiod;
 use core_course\external\course_summary_exporter;
 use core\external\coursecat_summary_exporter;
@@ -47,20 +48,29 @@ use core\url;
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class event_exporter_base extends exporter {
-
     /**
      * @var event_interface $event
      */
     protected $event;
+
+    /** @var event_mapper Event mapper used for legacy callback compatibility. */
+    private readonly event_mapper $eventmapper;
 
     /**
      * Constructor.
      *
      * @param event_interface $event
      * @param array $related The related data.
+     * @param event_mapper|null $eventmapper Event mapper.
      */
-    public function __construct(event_interface $event, $related = []) {
+    public function __construct(
+        event_interface $event,
+        $related = [],
+        ?event_mapper $eventmapper = null,
+    ) {
         $this->event = $event;
+        // Preserve direct construction by plugins which do not provide the mapper.
+        $this->eventmapper = $eventmapper ?? new event_mapper(new event_entity_factory());
 
         $starttimestamp = $event->get_times()->get_start_time()->getTimestamp();
         $endtimestamp = $event->get_times()->get_end_time()->getTimestamp();
@@ -310,7 +320,7 @@ class event_exporter_base extends exporter {
     protected function get_other_values(renderer_base $output) {
         $values = [];
         $event = $this->event;
-        $legacyevent = container::get_event_mapper()->from_event_to_legacy_event($event);
+        $legacyevent = $this->eventmapper->from_event_to_legacy_event($event);
         $context = $this->related['context'];
         $course = $this->related['course'];
         $values['isactionevent'] = false;
@@ -380,10 +390,10 @@ class event_exporter_base extends exporter {
                 'time' => $timesort]);
         $viewurl->set_anchor('event_' . $event->get_id());
         $values['viewurl'] = $viewurl->out(false);
-        $legacyevent = container::get_event_mapper()->from_event_to_legacy_event($event);
-        $humanperiod = humantimeperiod::create_from_timestamp(
-            starttimestamp: $legacyevent->timestart,
-            endtimestamp: $legacyevent->timestart + $legacyevent->timeduration,
+        $times = $event->get_times();
+        $humanperiod = humantimeperiod::create_from_datetime(
+            startdatetime: $times->get_start_time(),
+            enddatetime: $times->get_end_time(),
             link: new url(CALENDAR_URL . 'view.php'),
         );
         $values['formattedtime'] = $output->render($humanperiod);
@@ -398,9 +408,13 @@ class event_exporter_base extends exporter {
             // Export event action if applicable.
             $actionrelated = [
                 'context' => $this->related['context'],
-                'event' => $event
+                'event' => $event,
             ];
-            $actionexporter = new event_action_exporter($event->get_action(), $actionrelated);
+            $actionexporter = new event_action_exporter(
+                $event->get_action(),
+                $actionrelated,
+                $this->eventmapper,
+            );
             $values['action'] = $actionexporter->export($output);
         }
 

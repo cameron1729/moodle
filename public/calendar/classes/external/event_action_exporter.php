@@ -28,7 +28,8 @@ defined('MOODLE_INTERNAL') || die();
 
 use core\external\exporter;
 use core_calendar\local\event\entities\action_interface;
-use core_calendar\local\event\container;
+use core_calendar\local\event\factories\event_entity_factory;
+use core_calendar\local\event\mappers\event_mapper;
 use renderer_base;
 
 /**
@@ -39,14 +40,24 @@ use renderer_base;
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class event_action_exporter extends exporter {
+    /** @var event_mapper Event mapper used for the component callback. */
+    private readonly event_mapper $eventmapper;
 
     /**
      * Constructor.
      *
      * @param action_interface $action The action object.
      * @param array $related Related data.
+     * @param event_mapper|null $eventmapper Event mapper.
      */
-    public function __construct(action_interface $action, $related = []) {
+    public function __construct(
+        action_interface $action,
+        $related = [],
+        ?event_mapper $eventmapper = null,
+    ) {
+        // Preserve direct construction by plugins which do not provide the mapper.
+        $this->eventmapper = $eventmapper ?? new event_mapper(new event_entity_factory());
+
         $data = new \stdClass();
         $data->name = $action->get_name();
         $data->url = $action->get_url()->out(false);
@@ -94,8 +105,7 @@ class event_action_exporter extends exporter {
             return ['showitemcount' => false];
         }
         $showitemcountcallback = 'core_calendar_event_action_shows_item_count';
-        $mapper = container::get_event_mapper();
-        $calevent = $mapper->from_event_to_legacy_event($event);
+        $calevent = $this->eventmapper->from_event_to_legacy_event($event);
         $params = [$calevent, $this->data->itemcount];
         $showitemcount = component_callback($event->get_component(), $showitemcountcallback, $params, false);
 

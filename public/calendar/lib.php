@@ -2973,6 +2973,7 @@ function calendar_get_view(
         'events' => $events,
         'cache' => new \core_calendar\external\events_related_objects_cache($events),
         'type' => $type,
+        'eventpresenter' => \core\di::get(\core_calendar\presenter\event::class),
     ];
 
     $data = [];

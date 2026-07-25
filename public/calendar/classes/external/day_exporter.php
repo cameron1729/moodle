@@ -21,6 +21,7 @@ defined('MOODLE_INTERNAL') || die();
 require_once($CFG->dirroot . '/calendar/lib.php');
 
 use core\external\exporter;
+use core_calendar\presenter\event as event_presenter;
 use core_date;
 use DateTimeImmutable;
 use renderer_base;
@@ -51,7 +52,11 @@ class day_exporter extends exporter {
      * @param mixed $data Either an stdClass or an array of values.
      * @param array $related Related objects.
      */
-    public function __construct(\calendar_information $calendar, $data, $related) {
+    public function __construct(
+        \calendar_information $calendar,
+        $data,
+        $related,
+    ) {
         $this->calendar = $calendar;
 
         $url = new moodle_url('/calendar/view.php', [
@@ -183,34 +188,29 @@ class day_exporter extends exporter {
         if ($viewdaylinktitle = $this->get_view_link_title()) {
             $return['viewdaylinktitle'] = $viewdaylinktitle;
         }
-
-
         $cache = $this->related['cache'];
-        $eventexporters = array_map(function($event) use ($cache, $output) {
+        // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Direct-construction compatibility.
+        $eventpresenter = $this->related['eventpresenter'] ?? \core\di::get(event_presenter::class);
+        $return['events'] = array_map(function ($event) use ($cache, $output, $eventpresenter) {
             $context = $cache->get_context($event);
             $course = $cache->get_course($event);
             $moduleinstance = $cache->get_module_instance($event);
-            $exporter = new calendar_event_exporter($event, [
+            return $eventpresenter->for_template($event, [
                 'context' => $context,
                 'course' => $course,
                 'moduleinstance' => $moduleinstance,
                 'daylink' => $this->url,
                 'type' => $this->related['type'],
                 'today' => $this->data[0],
-            ]);
-
-            return $exporter;
+            ], $output);
         }, $this->related['events']);
-
-        $return['events'] = array_map(function($exporter) use ($output) {
-            return $exporter->export($output);
-        }, $eventexporters);
 
         $return['hasevents'] = !empty($return['events']);
 
-        $return['calendareventtypes'] = array_map(function($exporter) {
-            return $exporter->get_calendar_event_type();
-        }, $eventexporters);
+        $return['calendareventtypes'] = array_map(
+            fn($event): string => $eventpresenter->get_calendar_event_type($event),
+            $this->related['events'],
+        );
         $return['calendareventtypes'] = array_values(array_unique($return['calendareventtypes']));
 
         $return['haslastdayofevent'] = false;
@@ -234,6 +234,7 @@ class day_exporter extends exporter {
             'events' => '\core_calendar\local\event\entities\event_interface[]',
             'cache' => '\core_calendar\external\events_related_objects_cache',
             'type' => '\core_calendar\type_base',
+            'eventpresenter' => '\core_calendar\presenter\event?',
         ];
     }
 

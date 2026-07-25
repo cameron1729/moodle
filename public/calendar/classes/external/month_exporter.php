@@ -82,14 +82,17 @@ class month_exporter extends exporter {
      * @param \core_calendar\type_base $type The calendar type (e.g. Gregorian)
      * @param array $related The related information
      */
-    public function __construct(\calendar_information $calendar, \core_calendar\type_base $type, $related) {
+    public function __construct(
+        \calendar_information $calendar,
+        \core_calendar\type_base $type,
+        $related,
+    ) {
         // Increment the calendar instances count on initialisation.
         self::$calendarinstances++;
         // Assign this instance an ID based on the latest calendar instances count.
         $this->calendarinstanceid = self::$calendarinstances;
         $this->calendar = $calendar;
         $this->firstdayofweek = $type->get_starting_weekday();
-
         $this->url = new moodle_url('/calendar/view.php', [
                 'view' => 'month',
                 'time' => $calendar->time,
@@ -333,13 +336,25 @@ class month_exporter extends exporter {
         $prepadding = ($firstdayno + $daysinweek - $firstdayofweek) % $daysinweek;
         $daysinfirstweek = $daysinweek - $prepadding;
         $days = array_slice($alldays, 0, $daysinfirstweek);
-        $week = new week_exporter($this->calendar, $days, $prepadding, ($daysinweek - count($days) - $prepadding), $this->related);
+        $week = new week_exporter(
+            $this->calendar,
+            $days,
+            $prepadding,
+            ($daysinweek - count($days) - $prepadding),
+            $this->related,
+        );
         $weeks[] = $week->export($output);
 
         // Now chunk up the remaining day. and turn them into weeks.
         $daychunks = array_chunk(array_slice($alldays, $daysinfirstweek), $daysinweek);
         foreach ($daychunks as $days) {
-            $week = new week_exporter($this->calendar, $days, 0, ($daysinweek - count($days)), $this->related);
+            $week = new week_exporter(
+                $this->calendar,
+                $days,
+                0,
+                ($daysinweek - count($days)),
+                $this->related,
+            );
             $weeks[] = $week->export($output);
         }
 
@@ -376,6 +391,7 @@ class month_exporter extends exporter {
             'events' => '\core_calendar\local\event\entities\event_interface[]',
             'cache' => '\core_calendar\external\events_related_objects_cache',
             'type' => '\core_calendar\type_base',
+            'eventpresenter' => '\core_calendar\presenter\event?',
         ];
     }
 

@@ -28,9 +28,9 @@ defined('MOODLE_INTERNAL') || die();
 
 use core\external\exporter;
 use core_calendar\output\humantimeperiod;
+use core_calendar\presenter\event as event_presenter;
 use renderer_base;
 use core\url;
-use core_calendar\local\event\container;
 
 /**
  * Class for displaying the day view.
@@ -56,7 +56,10 @@ class calendar_upcoming_exporter extends exporter {
      * @param \calendar_information $calendar The calendar being represented.
      * @param array $related The related information
      */
-    public function __construct(\calendar_information $calendar, $related) {
+    public function __construct(
+        \calendar_information $calendar,
+        $related,
+    ) {
         $this->calendar = $calendar;
 
         parent::__construct([], $related);
@@ -114,27 +117,27 @@ class calendar_upcoming_exporter extends exporter {
         ]);
         $this->url = $url;
         $return['isloggedin'] = isloggedin();
-        $return['events'] = array_map(function($event) use ($cache, $output, $url) {
+        // phpcs:ignore MoodleExtra.PHP.DiscouragedContainerLookup.InClass -- Direct-construction compatibility.
+        $eventpresenter = $this->related['eventpresenter'] ?? \core\di::get(event_presenter::class);
+        $return['events'] = array_map(function ($event) use ($cache, $output, $url, $eventpresenter) {
             $context = $cache->get_context($event);
             $course = $cache->get_course($event);
             $moduleinstance = $cache->get_module_instance($event);
-            $exporter = new calendar_event_exporter($event, [
+            $data = $eventpresenter->for_template($event, [
                 'context' => $context,
                 'course' => $course,
                 'moduleinstance' => $moduleinstance,
                 'daylink' => $url,
                 'type' => $this->related['type'],
                 'today' => $this->calendar->time,
-            ]);
-
-            $data = $exporter->export($output);
+            ], $output);
 
             // We need to override default formatted time because it differs from day view.
             // Formatted time for upcoming view adds a link to the day view.
-            $legacyevent = container::get_event_mapper()->from_event_to_legacy_event($event);
-            $humanperiod = humantimeperiod::create_from_timestamp(
-                starttimestamp: $legacyevent->timestart,
-                endtimestamp: $legacyevent->timestart + $legacyevent->timeduration,
+            $times = $event->get_times();
+            $humanperiod = humantimeperiod::create_from_datetime(
+                startdatetime: $times->get_start_time(),
+                enddatetime: $times->get_end_time(),
                 link: new url(CALENDAR_URL . 'view.php'),
             );
             $data->formattedtime = $output->render($humanperiod);
@@ -189,6 +192,7 @@ class calendar_upcoming_exporter extends exporter {
             'events' => '\core_calendar\local\event\entities\event_interface[]',
             'cache' => '\core_calendar\external\events_related_objects_cache',
             'type' => '\core_calendar\type_base',
+            'eventpresenter' => '\core_calendar\presenter\event?',
         ];
     }
 }
