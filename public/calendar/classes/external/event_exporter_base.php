@@ -135,6 +135,7 @@ class event_exporter_base extends exporter {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_properties() {
         return [
             'id' => ['type' => PARAM_INT],
@@ -238,6 +239,7 @@ class event_exporter_base extends exporter {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_other_properties() {
         return [
             'icon' => [
@@ -317,6 +319,7 @@ class event_exporter_base extends exporter {
      * @param renderer_base $output The renderer.
      * @return array Keys are the property names, values are their values.
      */
+    #[\Override]
     protected function get_other_values(renderer_base $output) {
         $values = [];
         $event = $this->event;
@@ -426,6 +429,7 @@ class event_exporter_base extends exporter {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_related() {
         return [
             'context' => 'context',

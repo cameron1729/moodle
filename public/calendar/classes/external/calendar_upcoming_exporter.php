@@ -70,6 +70,7 @@ class calendar_upcoming_exporter extends exporter {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_other_properties() {
         return [
             'events' => [
@@ -106,6 +107,7 @@ class calendar_upcoming_exporter extends exporter {
      * @param renderer_base $output The renderer.
      * @return array Keys are the property names, values are their values.
      */
+    #[\Override]
     protected function get_other_values(renderer_base $output) {
         $timestamp = $this->calendar->time;
 
@@ -187,6 +189,7 @@ class calendar_upcoming_exporter extends exporter {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_related() {
         return [
             'events' => '\core_calendar\local\event\entities\event_interface[]',

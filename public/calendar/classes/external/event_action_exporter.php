@@ -72,6 +72,7 @@ class event_action_exporter extends exporter {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_properties() {
         return [
             'name' => ['type' => PARAM_TEXT],
@@ -86,6 +87,7 @@ class event_action_exporter extends exporter {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_other_properties() {
         return [
             'showitemcount' => ['type' => PARAM_BOOL, 'default' => false]
@@ -98,6 +100,7 @@ class event_action_exporter extends exporter {
      * @param renderer_base $output The renderer.
      * @return array Keys are the property names, values are their values.
      */
+    #[\Override]
     protected function get_other_values(renderer_base $output) {
         $event = $this->related['event'];
 
@@ -121,6 +124,7 @@ class event_action_exporter extends exporter {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_related() {
         return [
             'context' => 'context',

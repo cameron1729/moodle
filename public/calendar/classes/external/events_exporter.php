@@ -63,6 +63,7 @@ class events_exporter extends exporter {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_other_properties() {
         return [
             'events' => [
@@ -88,6 +89,7 @@ class events_exporter extends exporter {
      * @param renderer_base $output The renderer.
      * @return array Keys are the property names, values are their values.
      */
+    #[\Override]
     protected function get_other_values(renderer_base $output) {
         $return = [];
         $cache = $this->related['cache'];
@@ -113,6 +115,7 @@ class events_exporter extends exporter {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_related() {
         return [
             'cache' => 'core_calendar\external\events_related_objects_cache',

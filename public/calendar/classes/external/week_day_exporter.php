@@ -61,6 +61,7 @@ class week_day_exporter extends day_exporter {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_properties() {
         $return = parent::define_properties();
         $return = array_merge($return, [
@@ -82,6 +83,7 @@ class week_day_exporter extends day_exporter {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_other_properties() {
         $return = parent::define_other_properties();
         $return = array_merge($return, [
@@ -103,6 +105,7 @@ class week_day_exporter extends day_exporter {
      * @param renderer_base $output The renderer.
      * @return array Keys are the property names, values are their values.
      */
+    #[\Override]
     protected function get_other_values(renderer_base $output) {
         $return = parent::get_other_values($output);
 
@@ -120,6 +123,7 @@ class week_day_exporter extends day_exporter {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_related() {
         return [
             'events' => '\core_calendar\local\event\entities\event_interface[]',

@@ -80,6 +80,7 @@ class day_exporter extends exporter {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_properties() {
         // These are the default properties as returned by getuserdate()
         // but without the formatted month and week names.
@@ -113,6 +114,7 @@ class day_exporter extends exporter {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_other_properties() {
         return [
             'timestamp' => [
@@ -160,6 +162,7 @@ class day_exporter extends exporter {
      * @param renderer_base $output The renderer.
      * @return array Keys are the property names, values are their values.
      */
+    #[\Override]
     protected function get_other_values(renderer_base $output) {
         $daytimestamp = $this->calendar->time;
         $timestamp = $this->data[0];
@@ -229,6 +232,7 @@ class day_exporter extends exporter {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_related() {
         return [
             'events' => '\core_calendar\local\event\entities\event_interface[]',

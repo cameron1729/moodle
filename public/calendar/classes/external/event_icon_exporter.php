@@ -142,6 +142,7 @@ class event_icon_exporter extends exporter {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_properties() {
         return [
             'key' => ['type' => PARAM_TEXT],
@@ -158,6 +159,7 @@ class event_icon_exporter extends exporter {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_related() {
         return [
             'context' => 'context',

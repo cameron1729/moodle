@@ -67,6 +67,7 @@ class event_subscription_exporter extends exporter {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_properties() {
         return [
             'displayeventsource' => [

@@ -69,6 +69,7 @@ class day_name_exporter extends exporter {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_properties() {
         return [
             'dayno' => [

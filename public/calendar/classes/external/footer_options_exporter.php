@@ -86,6 +86,7 @@ class footer_options_exporter extends exporter {
      * @param renderer_base $output The renderer.
      * @return array Keys are the property names, values are their values.
      */
+    #[\Override]
     protected function get_other_values(renderer_base $output) {
         global $CFG;
 
@@ -119,6 +120,7 @@ class footer_options_exporter extends exporter {
      *
      * @return array
      */
+    #[\Override]
     public static function define_other_properties() {
         return [
             'footerlinks' => [

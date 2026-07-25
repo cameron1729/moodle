@@ -65,6 +65,7 @@ class calendar_event_exporter extends event_exporter_base {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_other_properties() {
 
         $values = parent::define_other_properties();
@@ -106,6 +107,7 @@ class calendar_event_exporter extends event_exporter_base {
      * @param renderer_base $output The renderer.
      * @return array Keys are the property names, values are their values.
      */
+    #[\Override]
     protected function get_other_values(renderer_base $output) {
         global $CFG;
 
@@ -212,6 +214,7 @@ class calendar_event_exporter extends event_exporter_base {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_related() {
         $related = parent::define_related();
         $related['daylink'] = \moodle_url::class;

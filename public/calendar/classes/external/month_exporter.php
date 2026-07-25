@@ -113,6 +113,7 @@ class month_exporter extends exporter {
         parent::__construct($data, $related);
     }
 
+    #[\Override]
     protected static function define_properties() {
         return [
             'url' => [
@@ -126,6 +127,7 @@ class month_exporter extends exporter {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_other_properties() {
         return [
             'courseid' => [
@@ -228,6 +230,7 @@ class month_exporter extends exporter {
      * @param renderer_base $output The renderer.
      * @return array Keys are the property names, values are their values.
      */
+    #[\Override]
     protected function get_other_values(renderer_base $output) {
         $previousperiod = $this->get_previous_month_data();
         $nextperiod = $this->get_next_month_data();
@@ -386,6 +389,7 @@ class month_exporter extends exporter {
      *
      * @return array
      */
+    #[\Override]
     protected static function define_related() {
         return [
             'events' => '\core_calendar\local\event\entities\event_interface[]',

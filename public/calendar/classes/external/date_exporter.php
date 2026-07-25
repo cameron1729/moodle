@@ -50,6 +50,7 @@ class date_exporter extends exporter {
         parent::__construct($data, $related);
     }
 
+    #[\Override]
     protected static function define_properties() {
         return [
             'seconds' => [
