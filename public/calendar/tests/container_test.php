@@ -16,8 +16,10 @@
 
 namespace core_calendar;
 
+use core\deprecation;
 use core_calendar\local\event\data_access\event_vault;
 use core_calendar\local\event\data_access\event_vault_interface;
+use core_calendar\local\event\container;
 use core_calendar\local\event\entities\action_event;
 use core_calendar\local\event\entities\event;
 use core_calendar\local\event\entities\event_interface;
@@ -51,6 +53,117 @@ final class container_test extends \advanced_testcase {
         parent::setUp();
         $this->resetAfterTest();
         $this->setAdminUser();
+    }
+
+    /**
+     * Consume only the expected deprecation notices from compatibility API calls.
+     */
+    protected function tearDown(): void {
+        $messages = $this->getDebuggingMessages();
+        $this->resetDebugging();
+
+        try {
+            $attribute = deprecation::from(container::class);
+            $this->assertNotNull($attribute);
+            $expected = deprecation::get_deprecation_string($attribute);
+            foreach ($messages as $message) {
+                $this->assertSame($expected, $message->message);
+                $this->assertSame(DEBUG_DEVELOPER, $message->level);
+            }
+        } finally {
+            parent::tearDown();
+        }
+    }
+
+    /**
+     * Test that the complete legacy public API and protected state remain available.
+     */
+    public function test_legacy_compatibility_surface_is_deprecated(): void {
+        $reflection = new \ReflectionClass(container::class);
+        $attribute = deprecation::from(container::class);
+        $this->assertNotNull($attribute);
+        $this->assertStringContainsString(
+            '@deprecated since Moodle 5.3 MDL-89216',
+            $reflection->getDocComment(),
+        );
+
+        $expectedmethods = array_keys(self::legacy_public_method_provider());
+        $actualmethods = array_map(
+            static fn(\ReflectionMethod $method): string => $method->getName(),
+            array_filter(
+                $reflection->getMethods(\ReflectionMethod::IS_PUBLIC),
+                static fn(\ReflectionMethod $method): bool => $method->getDeclaringClass()->getName() === container::class,
+            ),
+        );
+        sort($expectedmethods);
+        sort($actualmethods);
+        $this->assertSame($expectedmethods, $actualmethods);
+
+        foreach ($expectedmethods as $methodname) {
+            $this->assertStringContainsString(
+                '@deprecated since Moodle 5.3 MDL-89216',
+                $reflection->getMethod($methodname)->getDocComment(),
+            );
+        }
+
+        $legacyproperties = [
+            'eventfactory',
+            'eventmapper',
+            'actionfactory',
+            'eventvault',
+            'eventretrievalstrategy',
+            'coursecache',
+            'modulecache',
+            'requestinguserid',
+        ];
+        foreach ($legacyproperties as $propertyname) {
+            $property = $reflection->getProperty($propertyname);
+            $this->assertTrue($property->isProtected());
+            $this->assertTrue($property->isStatic());
+        }
+    }
+
+    /**
+     * Test that every legacy public method emits one deprecation notice.
+     *
+     * @param string $methodname Public method name.
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('legacy_public_method_provider')]
+    public function test_legacy_public_method_emits_deprecation(string $methodname): void {
+        $arguments = match ($methodname) {
+            'set_requesting_user' => [1234],
+            'apply_component_provide_event_action',
+            'apply_component_is_event_visible' => [$this->createStub(event_interface::class)],
+            default => [],
+        };
+
+        $callable = [container::class, $methodname];
+        $callable(...$arguments);
+
+        $attribute = deprecation::from(container::class);
+        $this->assertNotNull($attribute);
+        $this->assertDebuggingCalled(
+            deprecation::get_deprecation_string($attribute),
+            DEBUG_DEVELOPER,
+        );
+    }
+
+    /**
+     * Public methods exposed by the legacy container compatibility API.
+     *
+     * @return array
+     */
+    public static function legacy_public_method_provider(): array {
+        return [
+            'reset_caches' => ['reset_caches'],
+            'get_event_factory' => ['get_event_factory'],
+            'get_event_mapper' => ['get_event_mapper'],
+            'get_event_vault' => ['get_event_vault'],
+            'set_requesting_user' => ['set_requesting_user'],
+            'get_requesting_user' => ['get_requesting_user'],
+            'apply_component_provide_event_action' => ['apply_component_provide_event_action'],
+            'apply_component_is_event_visible' => ['apply_component_is_event_visible'],
+        ];
     }
 
     /**
@@ -588,20 +701,6 @@ final class container_test extends \advanced_testcase {
         // Historically, empty values have meant that the current user should be used.
         \core_calendar\local\event\container::set_requesting_user(0);
         $this->assertSame($currentuserid, \core_calendar\local\event\container::get_requesting_user());
-    }
-
-    /**
-     * Test that the legacy public callback methods remain callable.
-     */
-    public function test_component_callback_methods_are_callable(): void {
-        $this->assertIsCallable([
-            \core_calendar\local\event\container::class,
-            'apply_component_provide_event_action',
-        ]);
-        $this->assertIsCallable([
-            \core_calendar\local\event\container::class,
-            'apply_component_is_event_visible',
-        ]);
     }
 
     /**

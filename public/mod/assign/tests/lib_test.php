@@ -32,7 +32,7 @@ require_once($CFG->dirroot . '/mod/assign/locallib.php');
 require_once($CFG->dirroot . '/mod/assign/tests/generator.php');
 
 use core_calendar\local\api as calendar_local_api;
-use core_calendar\local\event\container as calendar_event_container;
+use core_calendar\local\event\mappers\event_mapper;
 use mod_assign_test_generator;
 
 /**
@@ -1335,7 +1335,7 @@ final class lib_test extends \advanced_testcase {
 
         $this->setAdminUser();
 
-        $mapper = calendar_event_container::get_event_mapper();
+        $mapper = \core\di::get(event_mapper::class);
         $now = time();
         $duedate = (new \DateTime())->setTimestamp($now);
         $newduedate = (new \DateTime())->setTimestamp($now)->modify('+1 day');
@@ -1389,7 +1389,7 @@ final class lib_test extends \advanced_testcase {
 
         $this->setAdminUser();
 
-        $mapper = calendar_event_container::get_event_mapper();
+        $mapper = \core\di::get(event_mapper::class);
         $now = time();
         $duedate = (new \DateTime())->setTimestamp($now);
         $newduedate = (new \DateTime())->setTimestamp($now)->modify('+1 day');

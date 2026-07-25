@@ -1,0 +1,13 @@
+issueNumber: MDL-89216
+notes:
+  core_calendar:
+    - message: >-
+        The `\core_calendar\local\event\container` class has been deprecated.
+        Its methods remain available for backwards compatibility. Use
+        constructor injection for Calendar dependencies. At application
+        boundaries, resolve only the required graph root with `\core\di`. Use
+        `\core_calendar\local\event\data_access\event_vault_factory::create($requestinguserid)`
+        to construct a user-specific event vault, and inject
+        `\core_calendar\local\event\mappers\event_mapper` where event mapping is
+        required.
+      type: deprecated

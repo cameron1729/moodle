@@ -17,7 +17,7 @@
 namespace core_calendar;
 
 use core_calendar\external\events_related_objects_cache;
-use core_calendar\local\event\container;
+use core_calendar\local\event\mappers\event_mapper;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -46,7 +46,7 @@ final class events_related_objects_cache_test extends \advanced_testcase {
      */
     public function test_get_module_instance_no_module(): void {
         $this->setAdminUser();
-        $mapper = container::get_event_mapper();
+        $mapper = \core\di::get(event_mapper::class);
         $legacyevent = create_event([
             'modulename' => '',
             'instance' => 0
@@ -63,7 +63,7 @@ final class events_related_objects_cache_test extends \advanced_testcase {
      */
     public function test_get_module_instance_with_modules(): void {
         $this->setAdminUser();
-        $mapper = container::get_event_mapper();
+        $mapper = \core\di::get(event_mapper::class);
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
         $plugingenerator = $generator->get_plugin_generator('mod_assign');
@@ -105,7 +105,7 @@ final class events_related_objects_cache_test extends \advanced_testcase {
      */
     public function test_module_instance_unknown_event(): void {
         $this->setAdminUser();
-        $mapper = container::get_event_mapper();
+        $mapper = \core\di::get(event_mapper::class);
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
         $plugingenerator = $generator->get_plugin_generator('mod_assign');

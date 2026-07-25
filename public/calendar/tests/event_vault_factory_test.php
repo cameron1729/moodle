@@ -18,7 +18,6 @@ namespace core_calendar;
 
 use core\di;
 use core_calendar\local\event\component_event_service;
-use core_calendar\local\event\container;
 use core_calendar\local\event\data_access\event_vault;
 use core_calendar\local\event\data_access\event_vault_factory;
 use core_calendar\local\event\entities\event_interface;
@@ -162,7 +161,7 @@ final class event_vault_factory_test extends \advanced_testcase {
         );
 
         $this->assertSame(1234, legacy_container_state::get_requesting_user());
-        $factoryproperty = new \ReflectionProperty(container::class, 'eventfactory');
+        $factoryproperty = new \ReflectionProperty(legacy_container_state::class, 'eventfactory');
         $this->assertNull($factoryproperty->getValue());
     }
 
@@ -175,7 +174,7 @@ final class event_vault_factory_test extends \advanced_testcase {
         calendar_get_legacy_events(0, 1, $user->id, false, false);
 
         $this->assertSame($user->id, legacy_container_state::get_requesting_user());
-        $factoryproperty = new \ReflectionProperty(container::class, 'eventfactory');
+        $factoryproperty = new \ReflectionProperty(legacy_container_state::class, 'eventfactory');
         $this->assertNull($factoryproperty->getValue());
     }
 

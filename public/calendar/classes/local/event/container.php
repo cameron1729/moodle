@@ -30,6 +30,7 @@ namespace core_calendar\local\event;
 
 defined('MOODLE_INTERNAL') || die();
 
+use core\attribute\deprecated;
 use core_calendar\action_factory;
 use core_calendar\local\event\data_access\event_vault;
 use core_calendar\local\event\entities\action_event;
@@ -43,7 +44,15 @@ use core_calendar\local\event\strategies\raw_event_retrieval_strategy;
  *
  * @copyright 2017 Cameron Ball <cameron@cameron1729.xyz>
  * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @deprecated since Moodle 5.3 MDL-89216 - use constructor injection and resolve only graph roots with \core\di
+ *     at application boundaries.
  */
+#[deprecated(
+    replacement: null,
+    since: '5.3',
+    reason: 'Use constructor injection and resolve only graph roots with \core\di at application boundaries.',
+    mdl: 'MDL-89216',
+)]
 class container extends legacy_container_state {
     /**
      * Initialises the dependency graph if it hasn't yet been.
@@ -106,8 +115,12 @@ class container extends legacy_container_state {
 
     /**
      * Reset all static caches, called between tests.
+     *
+     * @deprecated since Moodle 5.3 MDL-89216 - use constructor injection and resolve only graph roots with \core\di
+     *     at application boundaries.
      */
     public static function reset_caches() {
+        self::emit_deprecation();
         parent::reset_caches();
     }
 
@@ -115,8 +128,11 @@ class container extends legacy_container_state {
      * Gets the event factory.
      *
      * @return event_factory
+     * @deprecated since Moodle 5.3 MDL-89216 - use constructor injection and resolve only graph roots with \core\di
+     *     at application boundaries.
      */
     public static function get_event_factory() {
+        self::emit_deprecation();
         self::init();
         return self::$eventfactory;
     }
@@ -125,8 +141,11 @@ class container extends legacy_container_state {
      * Gets the event mapper.
      *
      * @return event_mapper
+     * @deprecated since Moodle 5.3 MDL-89216 - use constructor injection and resolve only graph roots with \core\di
+     *     at application boundaries.
      */
     public static function get_event_mapper() {
+        self::emit_deprecation();
         self::init();
         return self::$eventmapper;
     }
@@ -135,8 +154,11 @@ class container extends legacy_container_state {
      * Return an event vault.
      *
      * @return event_vault
+     * @deprecated since Moodle 5.3 MDL-89216 - use constructor injection and resolve only graph roots with \core\di
+     *     at application boundaries.
      */
     public static function get_event_vault() {
+        self::emit_deprecation();
         self::init();
         return self::$eventvault;
     }
@@ -149,8 +171,11 @@ class container extends legacy_container_state {
      *
      * @param int $userid The user id.
      * @throws \coding_exception
+     * @deprecated since Moodle 5.3 MDL-89216 - use constructor injection and resolve only graph roots with \core\di
+     *     at application boundaries.
      */
     public static function set_requesting_user($userid) {
+        self::emit_deprecation();
         parent::set_requesting_user($userid);
     }
 
@@ -159,8 +184,11 @@ class container extends legacy_container_state {
      * It usually is the current user unless it has been set explicitly using set_requesting_user.
      *
      * @return int
+     * @deprecated since Moodle 5.3 MDL-89216 - use constructor injection and resolve only graph roots with \core\di
+     *     at application boundaries.
      */
     public static function get_requesting_user() {
+        self::emit_deprecation();
         return parent::get_requesting_user();
     }
 
@@ -172,8 +200,11 @@ class container extends legacy_container_state {
      *
      * @param event_interface $event
      * @return action_event|event_interface
+     * @deprecated since Moodle 5.3 MDL-89216 - use constructor injection and resolve only graph roots with \core\di
+     *     at application boundaries.
      */
     public static function apply_component_provide_event_action(event_interface $event) {
+        self::emit_deprecation();
         self::init();
         return self::get_component_event_service()->apply_action($event, parent::get_requesting_user());
     }
@@ -187,8 +218,11 @@ class container extends legacy_container_state {
      *
      * @param event_interface $event
      * @return bool
+     * @deprecated since Moodle 5.3 MDL-89216 - use constructor injection and resolve only graph roots with \core\di
+     *     at application boundaries.
      */
     public static function apply_component_is_event_visible(event_interface $event) {
+        self::emit_deprecation();
         self::init();
         return self::get_component_event_service()->is_visible($event, parent::get_requesting_user());
     }
@@ -200,5 +234,12 @@ class container extends legacy_container_state {
      */
     private static function get_component_event_service(): component_event_service {
         return new component_event_service(self::$eventmapper, self::$actionfactory);
+    }
+
+    /**
+     * Emit the deprecation notice for the legacy container API.
+     */
+    private static function emit_deprecation(): void {
+        \core\deprecation::emit_deprecation_if_present(self::class);
     }
 }
