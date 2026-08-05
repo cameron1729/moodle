@@ -241,15 +241,10 @@ class manager {
     public static function reschedule_or_queue_adhoc_task(adhoc_task $task): void {
         global $DB;
 
-        if ($existingrecord = self::get_queued_adhoc_task_record($task, false)) {
-            // Only update the next run time if it is explicitly set on the task.
-            $nextruntime = $task->get_next_run_time();
-            if ($nextruntime && ($existingrecord->nextruntime != $nextruntime)) {
-                $DB->set_field('task_adhoc', 'nextruntime', $nextruntime, ['id' => $existingrecord->id]);
-            }
-        } else {
-            // There is nothing queued yet. Just queue as normal.
-            self::queue_adhoc_task($task);
+        $nextruntime = $task->get_next_run_time();
+        $taskid = self::queue_adhoc_task($task, true);
+        if ($taskid && $nextruntime) {
+            $DB->set_field('task_adhoc', 'nextruntime', $nextruntime, ['id' => $taskid]);
         }
     }
 

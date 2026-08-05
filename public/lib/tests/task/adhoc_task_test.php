@@ -532,6 +532,8 @@ final class adhoc_task_test extends \advanced_testcase {
      * Ensure that the reschedule_or_queue_adhoc_task function will schedule a new task if no tasks exist.
      */
     public function test_reschedule_or_queue_adhoc_task_no_existing(): void {
+        global $DB;
+
         $this->resetAfterTest(true);
 
         // Schedule adhoc task.
@@ -539,10 +541,11 @@ final class adhoc_task_test extends \advanced_testcase {
         $task->set_custom_data(['courseid' => 10]);
         manager::reschedule_or_queue_adhoc_task($task);
         $this->assertEquals(1, count(manager::get_adhoc_tasks('core\task\adhoc_test_task')));
+        $this->assertNotEmpty($DB->get_field('task_adhoc', 'identityhash', []));
     }
 
     /**
-     * Ensure that the reschedule_or_queue_adhoc_task function will schedule a new task if no tasks exist.
+     * Ensure that the reschedule_or_queue_adhoc_task function will revive an exhausted matching task.
      */
     public function test_reschedule_or_queue_adhoc_task_after_failure(): void {
         global $DB;
@@ -567,14 +570,14 @@ final class adhoc_task_test extends \advanced_testcase {
             'attemptsavailable' => 0,
         ]);
 
-        // Now, schedule the task again. Should create a new task.
+        // Now, schedule the task again. It should revive and reschedule the existing task.
         $task = new adhoc_test_task();
         $task->set_custom_data(['courseid' => 10]);
         $task->set_next_run_time($clock->time() + HOURSECS);
         manager::reschedule_or_queue_adhoc_task($task);
-        $this->assertEquals(2, count(manager::get_adhoc_tasks('core\task\adhoc_test_task')));
+        $this->assertEquals(1, count(manager::get_adhoc_tasks('core\task\adhoc_test_task')));
         $taskrecord2 = manager::get_queued_adhoc_task_record($task);
-        $this->assertNotEquals($taskrecord1->id, $taskrecord2->id);
+        $this->assertEquals($taskrecord1->id, $taskrecord2->id);
         $this->assertEquals($clock->time() + HOURSECS, $taskrecord2->nextruntime);
         $this->assertEquals(0, $taskrecord2->faildelay);
         $this->assertEquals(12, $taskrecord2->attemptsavailable);
@@ -957,17 +960,17 @@ final class adhoc_task_test extends \advanced_testcase {
         // Create adhoc tasks.
         $task1 = new adhoc_test_task();
         $task1->set_next_run_time(1510000000);
-        $task1->set_custom_data_as_string('Task 1');
+        $task1->set_custom_data('Task 1');
         manager::queue_adhoc_task($task1);
 
         $task2 = new adhoc_test_task();
         $task2->set_next_run_time(1520000000);
-        $task2->set_custom_data_as_string('Task 2');
+        $task2->set_custom_data('Task 2');
         manager::queue_adhoc_task($task2);
 
         $task3 = new adhoc_test_task();
         $task3->set_next_run_time(1520000000);
-        $task3->set_custom_data_as_string('Task 3');
+        $task3->set_custom_data('Task 3');
         manager::queue_adhoc_task($task3);
 
         // Shuffle tasks.
@@ -982,15 +985,15 @@ final class adhoc_task_test extends \advanced_testcase {
 
         // Confirm, that tasks are sorted by nextruntime and then by id (ascending).
         $task = manager::get_next_adhoc_task($clock->time());
-        $this->assertEquals('Task 2', $task->get_custom_data_as_string());
+        $this->assertEquals('Task 2', $task->get_custom_data());
         manager::adhoc_task_complete($task);
 
         $task = manager::get_next_adhoc_task($clock->time());
-        $this->assertEquals('Task 3', $task->get_custom_data_as_string());
+        $this->assertEquals('Task 3', $task->get_custom_data());
         manager::adhoc_task_complete($task);
 
         $task = manager::get_next_adhoc_task($clock->time());
-        $this->assertEquals('Task 1', $task->get_custom_data_as_string());
+        $this->assertEquals('Task 1', $task->get_custom_data());
         manager::adhoc_task_complete($task);
     }
 
