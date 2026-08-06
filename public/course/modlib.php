@@ -195,24 +195,34 @@ function add_moduleinfo($moduleinfo, $course, $mform = null) {
 
     // Course_modules and course_sections each contain a reference to each other.
     // So we have to update one of them twice.
-    $sectionid = course_add_cm_to_section(
-        $course,
-        $moduleinfo->coursemodule,
-        $moduleinfo->section,
-        $moduleinfo->beforemod,
-        $moduleinfo->modulename
-    );
+    $lockfactory = \core\lock\lock_config::get_lock_factory('core_course_content');
+    $lock = $lockfactory->get_lock('core_course_content_' . $course->id, 0);
+    if (!$lock) {
+        throw new moodle_exception('courserestoreinprogress', 'backup');
+    }
 
-    // Trigger event based on the action we did.
-    // Api create_from_cm expects modname and id property, and we don't want to modify $moduleinfo since we are returning it.
-    $eventdata = clone $moduleinfo;
-    $eventdata->modname = $eventdata->modulename;
-    $eventdata->id = $eventdata->coursemodule;
-    $event = \core\event\course_module_created::create_from_cm($eventdata, $modcontext);
-    $event->trigger();
+    try {
+        $sectionid = course_add_cm_to_section(
+            $course,
+            $moduleinfo->coursemodule,
+            $moduleinfo->section,
+            $moduleinfo->beforemod,
+            $moduleinfo->modulename
+        );
 
-    $moduleinfo = edit_module_post_actions($moduleinfo, $course);
-    $transaction->allow_commit();
+        // Trigger event based on the action we did.
+        // Api create_from_cm expects modname and id property, and we don't want to modify $moduleinfo since we are returning it.
+        $eventdata = clone $moduleinfo;
+        $eventdata->modname = $eventdata->modulename;
+        $eventdata->id = $eventdata->coursemodule;
+        $event = \core\event\course_module_created::create_from_cm($eventdata, $modcontext);
+        $event->trigger();
+
+        $moduleinfo = edit_module_post_actions($moduleinfo, $course);
+        $transaction->allow_commit();
+    } finally {
+        $lock->release();
+    }
 
     return $moduleinfo;
 }

@@ -378,42 +378,59 @@ class restore_controller extends base_controller {
     }
 
     public function execute_plan() {
-        // Basic/initial prevention against time/memory limits
-        core_php_time_limit::raise(1 * 60 * 60); // 1 hour for 1 course initially granted
-        raise_memory_limit(MEMORY_EXTRA);
-
-        // Release the session so other tabs in the same session are not blocked.
-        if ($this->get_releasesession() === backup::RELEASESESSION_YES) {
-            // Preemptively reset the navcache before closing, so it remains the same on shutdown.
-            navigation_cache::destroy_volatile_caches();
-
-            \core\session\manager::write_close();
+        $lock = null;
+        $target = $this->get_target();
+        $deletingcontent = $target == backup::TARGET_CURRENT_DELETING || $target == backup::TARGET_EXISTING_DELETING;
+        if ($deletingcontent) {
+            $lockfactory = \core\lock\lock_config::get_lock_factory('core_course_content');
+            $lock = $lockfactory->get_lock('core_course_content_' . $this->get_courseid(), 60);
+            if (!$lock) {
+                throw new moodle_exception('locktimeout');
+            }
         }
 
-        // Do course cleanup precheck, if required. This was originally in restore_ui. Moved to handle async backup/restore.
-        if ($this->get_target() == backup::TARGET_CURRENT_DELETING || $this->get_target() == backup::TARGET_EXISTING_DELETING) {
-            $options = array();
-            $options['keep_roles_and_enrolments'] = $this->get_setting_value('keep_roles_and_enrolments');
-            $options['keep_groups_and_groupings'] = $this->get_setting_value('keep_groups_and_groupings');
-            $options['userid'] = $this->userid;
-            restore_dbops::delete_course_content($this->get_courseid(), $options);
-        }
-        // If this is not a course restore or single activity restore (e.g. duplicate), inform the plan we are not
-        // including all the activities for sure. This will affect any
-        // task/step executed conditionally to stop processing information
-        // for section and activity restore. MDL-28180.
-        if ($this->get_type() !== backup::TYPE_1COURSE && $this->get_type() !== backup::TYPE_1ACTIVITY) {
-            $this->log('notifying plan about excluded activities by type', backup::LOG_DEBUG);
-            $this->plan->set_excluding_activities();
-        }
-        self::$executing++;
         try {
-            $this->plan->execute();
-        } catch (Exception $e) {
+            // Basic/initial prevention against time/memory limits
+            core_php_time_limit::raise(1 * 60 * 60); // 1 hour for 1 course initially granted
+            raise_memory_limit(MEMORY_EXTRA);
+
+            // Release the session so other tabs in the same session are not blocked.
+            if ($this->get_releasesession() === backup::RELEASESESSION_YES) {
+                // Preemptively reset the navcache before closing, so it remains the same on shutdown.
+                navigation_cache::destroy_volatile_caches();
+
+                \core\session\manager::write_close();
+            }
+
+            // Do course cleanup precheck, if required. This was originally in restore_ui. Moved to handle async backup/restore.
+            if ($deletingcontent) {
+                $options = array();
+                $options['keep_roles_and_enrolments'] = $this->get_setting_value('keep_roles_and_enrolments');
+                $options['keep_groups_and_groupings'] = $this->get_setting_value('keep_groups_and_groupings');
+                $options['userid'] = $this->userid;
+                restore_dbops::delete_course_content($this->get_courseid(), $options);
+            }
+            // If this is not a course restore or single activity restore (e.g. duplicate), inform the plan we are not
+            // including all the activities for sure. This will affect any
+            // task/step executed conditionally to stop processing information
+            // for section and activity restore. MDL-28180.
+            if ($this->get_type() !== backup::TYPE_1COURSE && $this->get_type() !== backup::TYPE_1ACTIVITY) {
+                $this->log('notifying plan about excluded activities by type', backup::LOG_DEBUG);
+                $this->plan->set_excluding_activities();
+            }
+            self::$executing++;
+            try {
+                $this->plan->execute();
+            } catch (Exception $e) {
+                self::$executing--;
+                throw $e;
+            }
             self::$executing--;
-            throw $e;
+        } finally {
+            if ($lock) {
+                $lock->release();
+            }
         }
-        self::$executing--;
     }
 
     /**

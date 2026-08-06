@@ -187,6 +187,7 @@ $string['copysource'] = 'Source';
 $string['copyview'] = 'Copy and view';
 $string['coursecategory'] = 'Category the course will be restored into';
 $string['courseid'] = 'Original ID';
+$string['courserestoreinprogress'] = 'This course cannot be changed because a restore is in progress.';
 $string['coursesettings'] = 'Course settings';
 $string['coursetitle'] = 'Title';
 $string['currentstage1'] = 'Initial settings';
