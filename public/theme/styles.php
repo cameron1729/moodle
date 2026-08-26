@@ -144,7 +144,8 @@ if ($type === 'editor' || $type === 'editor-rtl') {
 
 }
 
-if (($fallbacksheet = theme_styles_fallback_content($theme)) && !$theme->has_css_cached_content()) {
+$csscontent = $theme->get_css_cached_content();
+if (($fallbacksheet = theme_styles_fallback_content($theme)) && $csscontent === false) {
     // The theme is not yet available and a fallback is available.
     // Return the fallback immediately, specifying the Content-Length, then generate in the background.
     $css = file_get_contents($fallbacksheet);
@@ -166,16 +167,19 @@ if (($fallbacksheet = theme_styles_fallback_content($theme)) && !$theme->has_css
     $locktimeout = rand(90, 120);
 }
 
-// Attempt to fetch the lock.
-$lockfactory = \core\lock\lock_config::get_lock_factory('core_theme_get_css_content');
-$lock = $lockfactory->get_lock($themename, $locktimeout);
+$lock = false;
+if ($csscontent === false) {
+    // Attempt to fetch the lock.
+    $lockfactory = \core\lock\lock_config::get_lock_factory('core_theme_get_css_content');
+    $lock = $lockfactory->get_lock($themename, $locktimeout);
+}
 
 if ($sendaftergeneration || $lock) {
-    // Either the lock was successful, or the lock was unsuccessful but the content *must* be sent.
+    // Either the content must be sent, or the lock was successful.
 
     // The content does not exist locally.
-    // Generate and save it.
-    $candidatesheet = theme_styles_generate_and_store($theme, $rev, $themesubrev, $candidatedir);
+    // Fetch or generate and save it.
+    $candidatesheet = theme_styles_generate_and_store($theme, $rev, $themesubrev, $candidatedir, $csscontent);
 
     if ($lock) {
         $lock->release();
@@ -201,14 +205,18 @@ if ($sendaftergeneration || $lock) {
  * @param   int             $rev The theme revision
  * @param   int             $themesubrev The theme sub-revision
  * @param   string          $candidatedir The directory that it should be stored in
+ * @param   bool|string     $csscontent The cached CSS content, or false if it was not found
  * @return  string          The path that the primary CSS was written to
  */
-function theme_styles_generate_and_store($theme, $rev, $themesubrev, $candidatedir) {
+function theme_styles_generate_and_store($theme, $rev, $themesubrev, $candidatedir, $csscontent = false) {
     global $CFG;
     require_once("{$CFG->libdir}/filelib.php");
 
-    // Generate the content first.
-    if (!$csscontent = $theme->get_css_cached_content()) {
+    // Fetch or generate the content first.
+    if ($csscontent === false) {
+        $csscontent = $theme->get_css_cached_content();
+    }
+    if ($csscontent === false) {
         $csscontent = $theme->get_css_content();
         $theme->set_css_content_cache($csscontent);
     }
