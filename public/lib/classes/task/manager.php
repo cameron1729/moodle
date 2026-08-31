@@ -298,7 +298,16 @@ class manager {
         // If existing tasks are found without an identity hash, update one of them. The others may have been queued
         // intentionally without duplicate detection, so they must be left unchanged.
         if ($checkforexisting) {
-            // First, get all matching tasks (including duplicates).
+            $DB->mark_tables_for_primary('task_adhoc');
+
+            // If a task with this identity hash already exists, return it, reviving it first if exhausted.
+            $existingtask = $DB->get_record('task_adhoc', ['identityhash' => $record->identityhash]);
+            if ($existingtask) {
+                self::revive_adhoc_task($task, $existingtask);
+                return (int)$existingtask->id;
+            }
+
+            // Fall back to getting all matching tasks (including duplicates).
             $params = [$record->classname, $record->component, $record->customdata];
             $sql = 'classname = ? AND component = ? AND ' .
                 $DB->sql_compare_text('customdata', \core_text::strlen($record->customdata) + 1) . ' = ?';
@@ -311,15 +320,7 @@ class manager {
             }
             $sql .= " AND timestarted IS NULL";
 
-            $DB->mark_tables_for_primary('task_adhoc');
             $existingtasks = $DB->get_records_select('task_adhoc', $sql, $params, 'id ASC');
-
-            // If a task with this identity hash already exists, return it, reviving it first if exhausted.
-            $existingtask = $DB->get_record('task_adhoc', ['identityhash' => $record->identityhash]);
-            if ($existingtask) {
-                self::revive_adhoc_task($task, $existingtask);
-                return (int)$existingtask->id;
-            }
 
             $legacytasks = array_filter(
                 $existingtasks,
