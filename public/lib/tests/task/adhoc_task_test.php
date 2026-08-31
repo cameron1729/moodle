@@ -1319,6 +1319,35 @@ final class adhoc_task_test extends \advanced_testcase {
     }
 
     /**
+     * Test that tasks queued without duplicate detection are not removed by a later deduplicated task.
+     *
+     * @covers \core\task\manager::queue_adhoc_task
+     */
+    public function test_tasks_without_duplicate_detection_are_not_removed(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+
+        $task = new \core\task\adhoc_test_task();
+        $task->set_component('core_testcomponent');
+        $task->set_custom_data(['alpha' => 1, 'beta' => 2]);
+
+        $taskids = [];
+        for ($i = 0; $i < 3; $i++) {
+            $taskids[] = \core\task\manager::queue_adhoc_task($task);
+        }
+
+        $records = $DB->get_records_list('task_adhoc', 'id', $taskids);
+        $identityhashes = array_map(fn(\stdClass $record): string => $record->identityhash, $records);
+        $this->assertCount(3, array_unique($identityhashes));
+
+        $taskid = \core\task\manager::queue_adhoc_task($task, true);
+
+        $this->assertContains($taskid, $taskids);
+        $this->assertEquals(3, $DB->count_records('task_adhoc', ['component' => 'core_testcomponent']));
+    }
+
+    /**
      * Test that an existing task without identityhash is updated when $checkforexisting is true
      *
      * @covers \core\task\manager::queue_adhoc_task
@@ -1331,8 +1360,9 @@ final class adhoc_task_test extends \advanced_testcase {
         $task1->set_component('core_testcomponent');
         $task1->set_custom_data(['alpha' => 1, 'beta' => 2]);
 
-        // Queue task without identityhash.
+        // Simulate a task queued before identity hashes were introduced.
         $taskid = \core\task\manager::queue_adhoc_task($task1);
+        $DB->set_field('task_adhoc', 'identityhash', null, ['id' => $taskid]);
         $queuedtask = $DB->get_record('task_adhoc', ['id' => $taskid]);
         $this->assertNull($queuedtask->identityhash);
 
@@ -1351,15 +1381,15 @@ final class adhoc_task_test extends \advanced_testcase {
         // The queued task should now have an identityhash.
         $updatedtask = $DB->get_record('task_adhoc', ['id' => $taskid]);
         $this->assertNotEmpty($updatedtask->identityhash);
+
     }
 
     /**
-     * Test that existing duplicated tasks without identity hash are updated when a new task with the same
-     * parameters is queued.
+     * Test that one existing task without an identity hash is updated and the other matching tasks are retained.
      *
      * @covers \core\task\manager::queue_adhoc_task
      */
-    public function test_existing_duplicated_tasks_without_identityhash_is_updated(): void {
+    public function test_existing_duplicated_tasks_without_identityhash_are_retained(): void {
         $this->resetAfterTest();
         global $DB;
         // Queue one task without identityhash.
@@ -1371,6 +1401,8 @@ final class adhoc_task_test extends \advanced_testcase {
         \core\task\manager::queue_adhoc_task($task1);
         \core\task\manager::queue_adhoc_task($task1);
         \core\task\manager::queue_adhoc_task($task1);
+        // Simulate tasks queued before identity hashes were introduced.
+        $DB->set_field('task_adhoc', 'identityhash', null, ['component' => 'core_testcomponent']);
         $taskcount = $DB->count_records('task_adhoc', ['component' => 'core_testcomponent']);
         $this->assertEquals(3, $taskcount);
 
@@ -1382,21 +1414,21 @@ final class adhoc_task_test extends \advanced_testcase {
         // Queue task and check for existing ones. If found, it should update the task with identityhash.
         $taskid = \core\task\manager::queue_adhoc_task($task2, true);
 
-        // Assert that debugging was called for removing duplicates.
-        $this->assertDebuggingCalled('Removed 2 duplicate tasks for \core\task\adhoc_test_task', DEBUG_DEVELOPER);
-
-        // Verify only one task record remains and all duplicates are removed.
+        // Verify all legacy tasks remain queued.
         $taskcount = $DB->count_records('task_adhoc', ['component' => 'core_testcomponent']);
-        $this->assertEquals(1, $taskcount);
+        $this->assertEquals(3, $taskcount);
 
         // The queued task should now have an identityhash.
         $updatedtask = $DB->get_record('task_adhoc', ['id' => $taskid]);
         $this->assertNotEmpty($updatedtask->identityhash);
+
+        // Further duplicate checks should continue returning the retained task without changing the other tasks.
+        $this->assertEquals($taskid, \core\task\manager::queue_adhoc_task($task2, true));
+        $this->assertEquals(3, $DB->count_records('task_adhoc', ['component' => 'core_testcomponent']));
     }
 
     /**
-     * Test that existing duplicated tasks without identity hash are updated when a new task with the same
-     * parameters is queued.
+     * Test that existing duplicated tasks without identity hashes are retained, including running tasks.
      *
      * @covers \core\task\manager::queue_adhoc_task
      */
@@ -1419,6 +1451,8 @@ final class adhoc_task_test extends \advanced_testcase {
         \core\task\manager::queue_adhoc_task($task1);
         \core\task\manager::queue_adhoc_task($task1);
         $taskinexecution = \core\task\manager::queue_adhoc_task($task2);
+        // Simulate tasks queued before identity hashes were introduced.
+        $DB->set_field('task_adhoc', 'identityhash', null, ['component' => 'core_testcomponent']);
         $taskcount = $DB->count_records('task_adhoc', ['component' => 'core_testcomponent']);
         $this->assertEquals(4, $taskcount);
 
@@ -1430,12 +1464,9 @@ final class adhoc_task_test extends \advanced_testcase {
         // Queue task and check for existing ones. If found, it should ignore the one that has started executing.
         \core\task\manager::queue_adhoc_task($task3, true);
 
-        // Assert that debugging was called for removing 1 duplicate only.
-        $this->assertDebuggingCalled('Removed 2 duplicate tasks for \core\task\adhoc_test_task', DEBUG_DEVELOPER);
-
-        // Verify only two tasks for same component remains and the duplicates are removed.
+        // Verify all tasks remain queued.
         $taskcount = $DB->count_records('task_adhoc', ['component' => 'core_testcomponent']);
-        $this->assertEquals(2, $taskcount);
+        $this->assertEquals(4, $taskcount);
 
         // The task in execution should remain.
         $updatedtask = $DB->get_record('task_adhoc', ['id' => $taskinexecution]);

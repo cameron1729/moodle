@@ -3522,7 +3522,7 @@
         <FIELD NAME="pid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="PHP process ID that is running the task"/>
         <FIELD NAME="attemptsavailable" TYPE="int" LENGTH="2" NOTNULL="false" SEQUENCE="false" COMMENT="The remaining attempts for this task"/>
         <FIELD NAME="firststartingtime" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="The start time of the first run of the task"/>
-        <FIELD NAME="identityhash" TYPE="char" LENGTH="40" NOTNULL="false" SEQUENCE="false" COMMENT="Optional key to help identify logically duplicate adhoc tasks"/>
+        <FIELD NAME="identityhash" TYPE="char" LENGTH="40" NOTNULL="false" SEQUENCE="false" COMMENT="Identity key for adhoc tasks, shared when logical duplicate detection is enabled"/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>

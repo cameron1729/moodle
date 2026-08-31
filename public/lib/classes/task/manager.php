@@ -255,7 +255,8 @@ class manager {
      *  1. A task with duplicate detection enabled ($checkforexisting = true) attempts to insert.
      *  2. The insertion fails due to a database constraint violation.
      *  3. If it's a duplicate and all retries have been exhausted, it restores and schedules the task.
-     *  4. If multiple tasks are found when $checkforexisting = true, the oldest one is retained and the rest are deleted.
+     *  4. If matching legacy tasks are found when $checkforexisting = true, the oldest one is assigned the identity
+     *     hash and the rest are left unchanged.
      *
      * @param \core\task\adhoc_task $task - The new adhoc task information to store.
      * @param bool $checkforexisting - If set to true and the task with the same user, classname, component and customdata
@@ -280,6 +281,10 @@ class manager {
         }
 
         $record = self::record_from_adhoc_task($task, $checkforexisting);
+        if (!$checkforexisting) {
+            // Ensure intentionally duplicated tasks cannot be mistaken for legacy tasks.
+            $record->identityhash = bin2hex(random_bytes(20));
+        }
         // Schedule it immediately if nextruntime not explicitly set.
         if (!$task->get_next_run_time()) {
             $record->nextruntime = $clock->time() - 1;
@@ -290,10 +295,8 @@ class manager {
         // Set the time the task was created.
         $record->timecreated = $clock->time();
 
-        // If an existing task is found without an identity hash, update it.
-        // This handles cases where tasks were previously queued multiple times
-        // (e.g. due to race conditions) and prevents duplication of tasks created
-        // before identity hashes were introduced.
+        // If existing tasks are found without an identity hash, update one of them. The others may have been queued
+        // intentionally without duplicate detection, so they must be left unchanged.
         if ($checkforexisting) {
             // First, get all matching tasks (including duplicates).
             $params = [$record->classname, $record->component, $record->customdata];
@@ -306,25 +309,27 @@ class manager {
             } else {
                 $sql .= " AND userid IS NULL";
             }
-            $sql .= " AND identityhash IS NULL AND timestarted IS NULL";
+            $sql .= " AND timestarted IS NULL";
 
             $DB->mark_tables_for_primary('task_adhoc');
             $existingtasks = $DB->get_records_select('task_adhoc', $sql, $params, 'id ASC');
 
-            if (!empty($existingtasks)) {
-                // Retain the first task (oldest by ID) and treat the rest as duplicates.
-                $firsttaskid = array_key_first($existingtasks);
-                $tasktoretain = $existingtasks[$firsttaskid];
-                unset($existingtasks[$firsttaskid]);
+            // If a task with this identity hash already exists, return it, reviving it first if exhausted.
+            $existingtask = $DB->get_record('task_adhoc', ['identityhash' => $record->identityhash]);
+            if ($existingtask) {
+                self::revive_adhoc_task($task, $existingtask);
+                return (int)$existingtask->id;
+            }
 
-                // Delete all duplicate tasks.
-                if (!empty($existingtasks)) {
-                    $duplicateids = array_keys($existingtasks);
-                    [$insql, $inparams] = $DB->get_in_or_equal($duplicateids);
-                    $DB->delete_records_select('task_adhoc', "id $insql", $inparams);
+            $legacytasks = array_filter(
+                $existingtasks,
+                fn(\stdClass $existingtask): bool => $existingtask->identityhash === null,
+            );
 
-                    debugging("Removed " . count($duplicateids) . " duplicate tasks for {$record->classname}", DEBUG_DEVELOPER);
-                }
+            if (!empty($legacytasks)) {
+                // Update the first task (oldest by ID), leaving the other legacy tasks untouched.
+                $firsttaskid = array_key_first($legacytasks);
+                $tasktoretain = $legacytasks[$firsttaskid];
 
                 // Update the retained task with identity hash if it doesn't have one.
                 if ($tasktoretain->identityhash === null) {
@@ -338,11 +343,9 @@ class manager {
                 }
             }
 
-            // If a task with this identity hash already exists, return it, reviving it first if exhausted.
-            $existingtask = $DB->get_record('task_adhoc', ['identityhash' => $record->identityhash]);
-            if ($existingtask) {
-                self::revive_adhoc_task($task, $existingtask);
-                return (int)$existingtask->id;
+            // A matching task queued without duplicate detection already satisfies this request.
+            if (!empty($existingtasks)) {
+                return (int)array_key_last($existingtasks);
             }
         }
 
