@@ -29,6 +29,7 @@ require_once(__DIR__.'/fixtures/lib.php');
  * @copyright  nicolas@moodle.com
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\grade_category::class)]
 final class grade_category_test extends \grade_base_testcase {
 
     public function test_grade_category(): void {
@@ -179,6 +180,61 @@ final class grade_category_test extends \grade_base_testcase {
 
         $this->assertTrue($grade_category->delete());
         $this->assertFalse($DB->get_record('grade_categories', array('id' => $grade_category->id)));
+    }
+
+    /**
+     * Test that deleting a category removes duplicate total items and grades.
+     */
+    public function test_delete_with_duplicate_grade_items(): void {
+        global $DB;
+
+        $course = $this->getDataGenerator()->create_course();
+        $category = $this->getDataGenerator()->create_grade_category(['courseid' => $course->id]);
+        $category = new \grade_category($category);
+        $subcategory = $this->getDataGenerator()->create_grade_category([
+            'courseid' => $course->id,
+            'parent' => $category->id,
+        ]);
+        $child = $this->getDataGenerator()->create_grade_item([
+            'courseid' => $course->id,
+            'categoryid' => $category->id,
+        ]);
+
+        // Create duplicate category totals (these shouldn't exist but prior to MDL-86278 it could).
+        $item = $category->load_grade_item();
+        $duplicate = $item->get_record_data();
+
+        unset($duplicate->id);
+        $itemids = [$item->id, $DB->insert_record('grade_items', $duplicate)];
+
+        foreach (array_merge($itemids, [$child->id]) as $itemid) {
+            $grade = new \grade_grade(['itemid' => $itemid, 'userid' => $this->userid, 'finalgrade' => 50], false);
+            $grade->insert();
+        }
+
+        $this->assertTrue($category->delete());
+        $this->assertFalse($DB->record_exists('grade_categories', ['id' => $category->id]));
+        $this->assertFalse($DB->record_exists('grade_items', [
+            'courseid' => $course->id,
+            'itemtype' => 'category',
+            'iteminstance' => $category->id,
+        ]));
+
+        foreach ($itemids as $itemid) {
+            $this->assertFalse($DB->record_exists('grade_grades', ['itemid' => $itemid]));
+        }
+
+        $this->assertEquals($category->parent, $DB->get_field('grade_items', 'categoryid', ['id' => $child->id]));
+        $this->assertEquals($category->parent, $DB->get_field('grade_categories', 'parent', ['id' => $subcategory->id]));
+        $this->assertEquals(50, $DB->get_field('grade_grades', 'finalgrade', ['itemid' => $child->id]));
+        $this->assertNotEmpty(\grade_category::fetch_course_tree($course->id, true));
+        $this->assertTrue(grade_regrade_final_grades($course->id));
+
+        // Course category deletion must still remove all remaining categories and items.
+        $coursecategory = \grade_category::fetch_course_category($course->id);
+        $this->assertTrue($coursecategory->delete());
+        $this->assertFalse($DB->record_exists('grade_categories', ['courseid' => $course->id]));
+        $this->assertFalse($DB->record_exists('grade_items', ['courseid' => $course->id]));
     }
 
     protected function sub_test_grade_category_insert() {

@@ -341,8 +341,14 @@ class grade_category extends grade_object {
                 }
             }
 
-            // First delete the attached grade item and grades.
-            $gradeitem->delete($source);
+            // Delete all attached grade items and grades, including any duplicates (see
+            // MDL-86278 for how that can happen).
+            $params = ['courseid' => $this->courseid, 'itemtype' => $gradeitem->itemtype, 'iteminstance' => $this->id];
+            if ($items = grade_item::fetch_all($params)) {
+                foreach ($items as $item) {
+                    $item->delete($source);
+                }
+            }
 
             // Delete category itself.
             $success = parent::delete($source);
