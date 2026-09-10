@@ -2280,6 +2280,8 @@ class grade_category extends grade_object {
      * @return grade_item
      */
     public function get_grade_item() {
+        global $DB;
+
         if (empty($this->id)) {
             debugging("Attempt to obtain a grade_category's associated grade_item without the category's ID being set.");
             return false;
@@ -2293,12 +2295,27 @@ class grade_category extends grade_object {
         }
 
         if (!$gradeitems = grade_item::fetch_all($params)) {
-            // create a new one
-            $gradeitem = new grade_item($params, false);
-            $gradeitem->gradetype = GRADE_TYPE_VALUE;
-            $gradeitem->insert('system');
+            $lockfactory = \core\lock\lock_config::get_lock_factory('core_grades');
 
-        } else if (count($gradeitems) == 1) {
+            if (!$lock = $lockfactory->get_lock('categorytotal_' . $this->id, 10)) {
+                throw new \moodle_exception('locktimeout');
+            }
+
+            try {
+                // Another request may have created the total while we waited for the category lock.
+                $DB->mark_tables_for_primary('grade_items');
+                if (!$gradeitems = grade_item::fetch_all($params)) {
+                    $gradeitem = new grade_item($params, false);
+                    $gradeitem->gradetype = GRADE_TYPE_VALUE;
+                    $gradeitem->insert('system');
+                    $gradeitems = [$gradeitem];
+                }
+            } finally {
+                $lock->release();
+            }
+        }
+
+        if (count($gradeitems) == 1) {
             // found existing one
             $gradeitem = reset($gradeitems);
 
