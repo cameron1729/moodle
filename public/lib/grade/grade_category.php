@@ -296,7 +296,7 @@ class grade_category extends grade_object {
 
         try {
             $transaction = $DB->start_delegated_transaction();
-            $grade_item = $this->load_grade_item();
+            $gradeitem = $this->load_grade_item();
 
             if ($this->is_course_category()) {
 
@@ -315,7 +315,7 @@ class grade_category extends grade_object {
 
                     foreach ($items as $item) {
 
-                        if ($item->id == $grade_item->id) {
+                        if ($item->id == $gradeitem->id) {
                             continue; // Do not delete course item yet.
                         }
                         $item->delete($source);
@@ -342,7 +342,7 @@ class grade_category extends grade_object {
             }
 
             // First delete the attached grade item and grades.
-            $grade_item->delete($source);
+            $gradeitem->delete($source);
 
             // Delete category itself.
             $success = parent::delete($source);
@@ -2286,23 +2286,23 @@ class grade_category extends grade_object {
             $params = array('courseid'=>$this->courseid, 'itemtype'=>'category', 'iteminstance'=>$this->id);
         }
 
-        if (!$grade_items = grade_item::fetch_all($params)) {
+        if (!$gradeitems = grade_item::fetch_all($params)) {
             // create a new one
-            $grade_item = new grade_item($params, false);
-            $grade_item->gradetype = GRADE_TYPE_VALUE;
-            $grade_item->insert('system');
+            $gradeitem = new grade_item($params, false);
+            $gradeitem->gradetype = GRADE_TYPE_VALUE;
+            $gradeitem->insert('system');
 
-        } else if (count($grade_items) == 1) {
+        } else if (count($gradeitems) == 1) {
             // found existing one
-            $grade_item = reset($grade_items);
+            $gradeitem = reset($gradeitems);
 
         } else {
             debugging("Found more than one grade_item attached to category id:".$this->id);
             // return first one
-            $grade_item = reset($grade_items);
+            $gradeitem = reset($gradeitems);
         }
 
-        return $grade_item;
+        return $gradeitem;
     }
 
     /**
