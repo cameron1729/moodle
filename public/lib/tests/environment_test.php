@@ -45,6 +45,48 @@ final class environment_test extends \advanced_testcase {
         $this->assertNull($result);
     }
 
+    /**
+     * Check that only installed packages with mismatched versions block installation.
+     *
+     * @param array|null $installed Installed package versions, or null when Composer has not been run
+     * @param string|null $feedback Expected package diagnostic, or null when the check passes
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('composer_dependencies_provider')]
+    public function test_composer_dependencies_current(?array $installed, ?string $feedback): void {
+        $tempdir = make_request_directory();
+        $composer = new \core\tests\testable_composer($tempdir . '/vendor', $tempdir . '/composer.lock');
+        $composer->set_composer_lock(['package/test' => 'v2.0.0']);
+        if ($installed !== null) {
+            $composer->create_composer_installed_files();
+            $composer->set_installed_versions($installed);
+        }
+        \core\di::set(\core\composer::class, $composer);
+
+        $result = environment_tester::check_composer_dependencies_current(new \environment_results('custom_check'));
+        if ($feedback === null) {
+            $this->assertNull($result);
+            return;
+        }
+
+        $this->assertNotNull($result);
+        $this->assertFalse($result->getStatus());
+        $this->assertSame(['composerdependenciesoutdated', 'admin', $feedback], $result->getFeedbackStr());
+    }
+
+    /**
+     * Composer installations with matching, mismatched or missing packages.
+     *
+     * @return array
+     */
+    public static function composer_dependencies_provider(): array {
+        return [
+            'current' => [['package/test' => '2.0.0'], null],
+            'outdated' => [['package/test' => '1.0.0'], 'package/test (1.0.0 → 2.0.0)'],
+            'missing package' => [[], null],
+            'Composer not installed' => [null, null],
+        ];
+    }
+
     public function test_composer_dev_installed(): void {
         \org\bovigo\vfs\vfsStream::setup('root', null, [
             'vendor' => [

@@ -169,6 +169,7 @@ $string['commonactivitysettings'] = 'Common activity settings';
 $string['commonfiltersettings'] = 'Common filter settings';
 $string['commonsettings'] = 'Common settings';
 $string['componentinstalled'] = 'Component installed';
+$string['composerdependenciesoutdated'] = 'Composer dependencies do not match this Moodle version. Run "composer install" in the Moodle root directory before continuing. Packages (installed → required): {$a}';
 $string['composernotfound'] = 'Composer dependencies were not found. Make sure the "composer install --no-dev --classmap-authoritative" command has been run in the Moodle root directory. If you are not using Composer, make sure the vendor directory exists and contains the necessary files.';
 $string['composerdeveloperdependenciesinstalled'] = 'Composer Developer dependencies are installed. Make sure the "composer install --no-dev --classmap-authoritative" command has been run in the Moodle root directory.';
 $string['composeroptimisedindevmode'] = 'The Composer autoloader is currently running optimised whilst Moodle is in developer mode. This can cause issues in some cases. You may wish to run "composer install" without additional arguments.';

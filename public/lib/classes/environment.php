@@ -62,6 +62,31 @@ class environment {
     }
 
     /**
+     * Check that installed Composer runtime dependencies match the lockfile.
+     *
+     * Missing packages may still be supplied by Moodle's bundled libraries.
+     *
+     * @param \environment_results $result
+     * @return \environment_results|null
+     */
+    public static function check_composer_dependencies_current(\environment_results $result): ?\environment_results {
+        $outdated = di::get(composer::class)->get_status()->outdated_packages();
+        if (!$outdated) {
+            return null;
+        }
+
+        $packages = [];
+        foreach ($outdated as $name => $package) {
+            $packages[] = s("{$name} ({$package->installedversion} → {$package->requiredversion})");
+        }
+
+        $result->setStatus(false);
+        $result->setInfo('Composer dependencies');
+        $result->setFeedbackStr(['composerdependenciesoutdated', 'admin', implode(', ', $packages)]);
+        return $result;
+    }
+
+    /**
      * Ensure that Composer developer dependencies are not installed.
      *
      * @param \environment_results $result

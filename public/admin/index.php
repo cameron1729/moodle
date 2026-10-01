@@ -233,9 +233,9 @@ if (!core_tables_exist()) {
         echo $output->install_licence_page();
         die();
     }
-    if (empty($confirmrelease)) {
-        require_once($CFG->libdir . '/environmentlib.php');
-        [$envstatus, $environmentresults] = check_moodle_environment(normalize_version($release), ENV_SELECT_RELEASE);
+    require_once($CFG->libdir . '/environmentlib.php');
+    [$envstatus, $environmentresults] = check_moodle_environment(normalize_version($release), ENV_SELECT_RELEASE);
+    if (empty($confirmrelease) || !$envstatus) {
         $strcurrentrelease = get_string('currentrelease');
 
         $PAGE->navbar->add($strcurrentrelease);
@@ -370,9 +370,11 @@ if (!$outagelessupgrade) {
 
             echo $output->upgrade_confirm_page($a->newversion, $maturity, $testsite);
             die();
-        } else if (empty($confirmrelease)) {
-            require_once($CFG->libdir . '/environmentlib.php');
-            [$envstatus, $environmentresults] = check_moodle_environment($release, ENV_SELECT_RELEASE);
+        }
+
+        require_once($CFG->libdir . '/environmentlib.php');
+        [$envstatus, $environmentresults] = check_moodle_environment($release, ENV_SELECT_RELEASE);
+        if (empty($confirmrelease) || !$envstatus) {
             $strcurrentrelease = get_string('currentrelease');
 
             $PAGE->navbar->add($strcurrentrelease);
@@ -575,10 +577,9 @@ if (!$outagelessupgrade) {
             $pluginman = core_plugin_manager::instance();
             $output = $PAGE->get_renderer('core', 'admin');
 
-            if (empty($confirmrelease)) {
-                require_once($CFG->libdir . '/environmentlib.php');
-
-                [$envstatus, $environmentresults] = check_moodle_environment($release, ENV_SELECT_RELEASE);
+            require_once($CFG->libdir . '/environmentlib.php');
+            [$envstatus, $environmentresults] = check_moodle_environment($release, ENV_SELECT_RELEASE);
+            if (empty($confirmrelease) || !$envstatus) {
                 $strcurrentrelease = get_string('currentrelease');
 
                 $PAGE->navbar->add($strcurrentrelease);
