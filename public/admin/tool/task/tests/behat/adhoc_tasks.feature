@@ -18,9 +18,9 @@ Feature: Manage adhoc task
       | Next run         |
       | <nextruntimestr> |
     Examples:
-      | nextruntime       | nextruntimestr                         |
-      | ##yesterday##     | ASAP                                   |
-      | ##tomorrow noon## | ##tomorrow noon##%A, %d %B %Y, %I:%M## |
+      | nextruntime       | nextruntimestr                        |
+      | ##yesterday##     | ASAP                                  |
+      | ##tomorrow noon## | ##tomorrow noon##%A, %d %B %Y, noon## |
 
   Scenario: Delete an existing adhoc task
     Given I log in as "admin"

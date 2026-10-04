@@ -64,21 +64,21 @@ Feature: Testing overview integration in mod_bigbluebuttonbn
     Given I am on the "Course 1" "course > activities > bigbluebuttonbn" page logged in as "editingteacher1"
     When I should not see "Grade" in the "bigbluebuttonbn_overview_collapsible" "region"
     Then the following should exist in the "Table listing all BigBlueButton activities" table:
-      | Name                      | Opens                            | Closes                           | Instance type        | Recordings | Actions |
-      | RoomRecordings            | Monday, 1 January 2024, 12:00 AM | -                                | Room with recordings | 3          | View    |
-      | RoomOnly                  | -                                | Sunday, 1 January 2040, 12:00 AM | Room only            | -          | View    |
-      | RecordingOnly             | -                                | -                                | Recordings only      | 0          | View    |
-      | RoomRecordingsNoUser      | Monday, 1 January 2024, 12:00 AM | Sunday, 1 January 2040, 12:00 AM | Room with recordings | 0          | View    |
-      | RoomRecordingsNoModerator | Monday, 1 January 2024, 12:00 AM | Sunday, 1 January 2040, 12:00 AM |                      |            |         |
+      | Name                      | Opens                                           | Closes                                          | Instance type        | Recordings | Actions |
+      | RoomRecordings            | Monday, 1 January 2024, midnight (start of day) | -                                               | Room with recordings | 3          | View    |
+      | RoomOnly                  | -                                               | Sunday, 1 January 2040, midnight (start of day) | Room only            | -          | View    |
+      | RecordingOnly             | -                                               | -                                               | Recordings only      | 0          | View    |
+      | RoomRecordingsNoUser      | Monday, 1 January 2024, midnight (start of day) | Sunday, 1 January 2040, midnight (start of day) | Room with recordings | 0          | View    |
+      | RoomRecordingsNoModerator | Monday, 1 January 2024, midnight (start of day) | Sunday, 1 January 2040, midnight (start of day) |                      |            |         |
 
   Scenario: Students can see relevant columns in the bigbluebuttonbn overview
     Given I am on the "Course 1" "course > activities > bigbluebuttonbn" page logged in as "student1"
     Then the following should exist in the "Table listing all BigBlueButton activities" table:
-      | Name                      | Opens                            | Closes                           | Grade |
-      | RoomRecordings            | Monday, 1 January 2024, 12:00 AM | -                                | 90.00 |
-      | RoomOnly                  | -                                | Sunday, 1 January 2040, 12:00 AM | -     |
-      | RecordingOnly             | -                                | -                                |       |
-      | RoomRecordingsNoUser      | Monday, 1 January 2024, 12:00 AM | Sunday, 1 January 2040, 12:00 AM |       |
-      | RoomRecordingsNoModerator | Monday, 1 January 2024, 12:00 AM | Sunday, 1 January 2040, 12:00 AM |       |
+      | Name                      | Opens                                           | Closes                                          | Grade |
+      | RoomRecordings            | Monday, 1 January 2024, midnight (start of day) | -                                               | 90.00 |
+      | RoomOnly                  | -                                               | Sunday, 1 January 2040, midnight (start of day) | -     |
+      | RecordingOnly             | -                                               | -                                               |       |
+      | RoomRecordingsNoUser      | Monday, 1 January 2024, midnight (start of day) | Sunday, 1 January 2040, midnight (start of day) |       |
+      | RoomRecordingsNoModerator | Monday, 1 January 2024, midnight (start of day) | Sunday, 1 January 2040, midnight (start of day) |       |
     And I should not see "Instance type" in the "bigbluebuttonbn_overview_collapsible" "region"
     And I should not see "Actions" in the "bigbluebuttonbn_overview_collapsible" "region"

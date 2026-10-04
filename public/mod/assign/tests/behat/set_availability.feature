@@ -56,7 +56,7 @@ Feature: Set availability dates for an assignment
     When I am on the "Assignment name" Activity page logged in as student1
     Then "Add submission" "button" should not exist
     And the activity date in "Assignment name" should contain "Opens:"
-    And the activity date in "Assignment name" should contain "##tomorrow noon##%A, %d %B %Y, %I:%M##"
+    And the activity date in "Assignment name" should contain "##tomorrow noon##%A, %d %B %Y, noon##"
 
   Scenario: Student can see the assignment's due date in the course calendar
     Given the following "activity" exists:

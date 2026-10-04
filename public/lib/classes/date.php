@@ -697,12 +697,29 @@ class core_date {
     }
 
     /**
-     * Locale-formatted strftime using IntlDateFormatter (PHP 8.1 compatible)
-     * This provides a cross-platform alternative to strftime() for when it will be removed from PHP.
-     * Note that output can be slightly different between libc sprintf and this function as it is using ICU.
+     * This method was originally adapted from https://github.com/alphp/strftime and now contains
+     * many Moodle-specific customisations.
      *
-     * From:
-     * https://github.com/alphp/strftime
+     * It provides locale-formatted dates using IntlDateFormatter as a replacement for PHP's native
+     * strftime() (which is deprecated and will eventually be removed). Output can differ from the
+     * native function because locale-specific formatting uses ICU.
+     *
+     * We also support %{time12} (12-hour time with minutes) and %{time12seconds} (with seconds). Both
+     * use localised names at exactly noon and midnight; they are otherwise equivalent to %I:%M %p and
+     * %I:%M:%S %p, respectively. These are Moodle-specific tokens.
+     *
+     * We name noon and midnight explicitly, which aligns with NIST and the Australian Government Style
+     * Manual's guidance (and many many other style guides) to avoid ambiguous "12 am" and "12 pm" labels.
+     * Midnight is identified as the start of the displayed day to address date ambiguity.
+     *
+     * The label replaces the whole time, following the approach of Django's P format. Unicode/ICU's b
+     * represents an AM/PM/noon/midnight day period field in a different pattern syntax. Moodle uses
+     * strftime syntax, where %b already means abbreviated month, so we can't use it for this purpose.
+     *
+     * @link https://www.nist.gov/pml/time-and-frequency-division/times-day-faqs
+     * @link https://www.stylemanual.gov.au/grammar-punctuation-and-conventions/numbers-and-measurements/dates-and-time
+     * @link https://docs.djangoproject.com/en/5.2/ref/templates/builtins/#date
+     * @link https://www.unicode.org/reports/tr35/tr35-dates.html#Date_Field_Symbol_Table
      *
      * @param  string $format Date format
      * @param  int|string|DateTime $timestamp Timestamp
@@ -717,7 +734,7 @@ class core_date {
         // Windows format.
         $locale = $locale ?: get_string('locale', 'langconfig');
 
-        // The following code is taken from https://github.com/alphp/strftime.
+        // Adapted from https://github.com/alphp/strftime with Moodle-specific customisations.
         // phpcs:disable
         if (!($timestamp instanceof DateTimeInterface)) {
           $timestamp = is_numeric($timestamp) ? '@' . $timestamp : (string) $timestamp;
@@ -832,6 +849,13 @@ class core_date {
           return $result;
         };
 
+        // Moodle-specific formats naming exact noon and midnight in the target timezone.
+        $twelvehourformatter = fn(DateTimeInterface $timestamp, string $format): string => match ($timestamp->format('H:i:s')) {
+            '00:00:00' => get_string('midnightstartofday'),
+            '12:00:00' => get_string('noon'),
+            default => $timestamp->format($format === '%{time12}' ? 'h:i A' : 'h:i:s A'),
+        };
+
         // Same order as https://www.php.net/manual/en/function.strftime.php
         $translation_table = [
           // Day
@@ -891,6 +915,8 @@ class core_date {
           '%M' => 'i',
           '%p' => 'A', // AM PM (this is reversed on purpose!)
           '%P' => 'a', // am pm
+          '%{time12}' => $twelvehourformatter,
+          '%{time12seconds}' => $twelvehourformatter,
           '%r' => 'h:i:s A', // %I:%M:%S %p
           '%R' => 'H:i', // %H:%M
           '%S' => 's',
@@ -909,7 +935,8 @@ class core_date {
           '%x' => $intl_formatter,
         ];
 
-        $out = preg_replace_callback('/(?<!%)%([_#-]?)([a-zA-Z])/', function ($match) use ($translation_table, $timestamp) {
+        // Accept Moodle's named %{...} tokens as well as the standard single-letter specifiers.
+        $out = preg_replace_callback('/(?<!%)%([_#-]?)([a-zA-Z]|\{[a-zA-Z0-9]+\})/', function ($match) use ($translation_table, $timestamp) {
           $prefix = $match[1];
           $char = $match[2];
           $pattern = '%'.$char;
