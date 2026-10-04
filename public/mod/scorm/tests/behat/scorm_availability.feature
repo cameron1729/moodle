@@ -23,22 +23,22 @@ Feature: Scorm availability
   Scenario: Scorm activity with dates in the past should not be available.
     When I am on the "Past SCORM" "scorm activity" page logged in as "student1"
     Then the activity date in "Past SCORM" should contain "Opened:"
-    And the activity date in "Past SCORM" should contain "##yesterday noon##%A, %d %B %Y, %I:%M##"
+    And the activity date in "Past SCORM" should contain "##yesterday##%A, %d %B %Y, midnight (start of day)##"
     And the activity date in "Past SCORM" should contain "Closed:"
-    And the activity date in "Past SCORM" should contain "##yesterday noon##%A, %d %B %Y, %I:%M##"
+    And the activity date in "Past SCORM" should contain "##yesterday##%A, %d %B %Y, midnight (start of day)##"
     And "Enter" "button" should not exist
     And I should not see "Preview"
     And I am on the "Current SCORM" "scorm activity" page
     And the activity date in "Current SCORM" should contain "Opened:"
-    And the activity date in "Current SCORM" should contain "##yesterday noon##%A, %d %B %Y, %I:%M##"
+    And the activity date in "Current SCORM" should contain "##yesterday##%A, %d %B %Y, midnight (start of day)##"
     And the activity date in "Current SCORM" should contain "Closes:"
-    And the activity date in "Current SCORM" should contain "##tomorrow noon##%A, %d %B %Y, %I:%M##"
+    And the activity date in "Current SCORM" should contain "##tomorrow##%A, %d %B %Y, midnight (start of day)##"
     And "Enter" "button" should exist
     And I should see "Preview"
     And I am on the "Future SCORM" "scorm activity" page
     And the activity date in "Future SCORM" should contain "Opens:"
-    And the activity date in "Future SCORM" should contain "##tomorrow noon##%A, %d %B %Y, %I:%M##"
+    And the activity date in "Future SCORM" should contain "##tomorrow##%A, %d %B %Y, midnight (start of day)##"
     And the activity date in "Future SCORM" should contain "Closes:"
-    And the activity date in "Future SCORM" should contain "##tomorrow noon##%A, %d %B %Y, %I:%M##"
+    And the activity date in "Future SCORM" should contain "##tomorrow##%A, %d %B %Y, midnight (start of day)##"
     And "Enter" "button" should not exist
     And I should not see "Preview"

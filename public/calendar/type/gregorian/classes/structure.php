@@ -285,7 +285,7 @@ class structure extends type_base {
      *        {@link https://moodledev.io/docs/apis/subsystems/time#timezone}
      * @param bool $fixday if true then the leading zero from %d is removed,
      *        if false then the leading zero is maintained
-     * @param bool $fixhour if true then the leading zero from %I is removed,
+     * @param bool $fixhour if true then the leading zero from %I, %{time12} or %{time12seconds} is removed,
      *        if false then the leading zero is maintained
      * @return string the formatted date/time
      */
@@ -317,8 +317,8 @@ class structure extends type_base {
 
         if (empty($CFG->nofixhour) && $fixhour) {
             $format = str_replace(
-                '%I',
-                'DDHH%lHHDD',
+                ['%I', '%{time12}', '%{time12seconds}'],
+                ['DDHH%lHHDD', '%-{time12}', '%-{time12seconds}'],
                 $format,
             );
         }
