@@ -1852,7 +1852,7 @@ function format_time($totalsecs, $str = null) {
  *        {@link https://moodledev.io/docs/apis/subsystems/time#timezone}
  * @param bool $fixday If true (default) then the leading zero from %d is removed.
  *        If false then the leading zero is maintained.
- * @param bool $fixhour If true (default) then the leading zero from %I is removed.
+ * @param bool $fixhour If true (default) then the leading zero from %I, %{time12} or %{time12seconds} is removed.
  * @return string the formatted date/time.
  */
 function userdate($date, $format = '', $timezone = 99, $fixday = true, $fixhour = true) {

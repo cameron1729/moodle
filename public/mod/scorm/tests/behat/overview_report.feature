@@ -58,9 +58,9 @@ Feature: Testing overview integration in mod_scorm
     And I should see "Total attempts" in the "scorm_overview_collapsible" "region"
     And I should see "Actions" in the "scorm_overview_collapsible" "region"
     Then the following should exist in the "Table listing all SCORM package activities" table:
-      | Name    | Due date                         | Student who attempted | Total attempts | Actions |
-      | Scorm 1 | Sunday, 1 January 2040, 12:00 AM | 2 of 5                | 2              | View    |
-      | Scorm 2 | -                                | 0 of 5                | 0              | View    |
+      | Name    | Due date                                        | Student who attempted | Total attempts | Actions |
+      | Scorm 1 | Sunday, 1 January 2040, midnight (start of day) | 2 of 5                | 2              | View    |
+      | Scorm 2 | -                                               | 0 of 5                | 0              | View    |
 
   @javascript
   Scenario: Teachers can see relevant columns when there are no participants in the course
