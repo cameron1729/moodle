@@ -36,7 +36,7 @@ Feature: Quiz availability can be set
     When I am on the "Quiz 1" "quiz activity" page logged in as student1
     # Confirm display as student depending on case.
     Then I should see "<opentext>:"
-    And I should see "<timeopen>%A, %d %B %Y, %I:%M##"
+    And I should see "<timeopen>%A, %d %B %Y, %{time12}##"
     And I should not see "Close:"
     And I <quizavailability> see "This quiz is currently not available."
     And "Attempt quiz" "button" <attemptvisibility> exist
@@ -58,7 +58,7 @@ Feature: Quiz availability can be set
     When I am on the "Quiz 1" "quiz activity" page logged in as student1
     # Confirm display as student depending on case.
     Then I should see "<closetext>:"
-    And I should see "<timeclose>%A, %d %B %Y, %I:%M##"
+    And I should see "<timeclose>%A, %d %B %Y, %{time12}##"
     And I <quizavailability> see "This quiz is currently not available."
     And "Attempt quiz" "button" <attemptvisibility> exist
 
@@ -79,9 +79,9 @@ Feature: Quiz availability can be set
     When I am on the "Quiz 1" "quiz activity" page logged in as student1
     # Confirm display as student depending on case.
     Then I should see "<opentext>:"
-    And I should see "<timeopen>%A, %d %B %Y, %I:%M##"
+    And I should see "<timeopen>%A, %d %B %Y, %{time12}##"
     And I should see "<closetext>:"
-    And I should see "<timeclose>%A, %d %B %Y, %I:%M##"
+    And I should see "<timeclose>%A, %d %B %Y, %{time12}##"
     And I <quizavailability> see "This quiz is currently not available."
     And "Attempt quiz" "button" <attemptvisibility> exist
 

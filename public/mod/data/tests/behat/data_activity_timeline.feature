@@ -31,9 +31,9 @@ Feature: Students can view upcoming data activities in the timeline block
     # Confirm link works and redirects to db activity
     And I click on "DB Future" "link" in the "Timeline" "block"
     And the activity date in "DB Future" should contain "Opens:"
-    And the activity date in "DB Future" should contain "<futurefrom>%A, %d %B %Y, %I:%M##"
+    And the activity date in "DB Future" should contain "<futurefrom>%A, %d %B %Y, %{time12}##"
     And the activity date in "DB Future" should contain "Closes:"
-    And the activity date in "DB Future" should contain "<futureto>%A, %d %B %Y, %I:%M##"
+    And the activity date in "DB Future" should contain "<futureto>%A, %d %B %Y, %{time12}##"
 
     Examples:
       | pastfrom         | pastto                | futurefrom           | futureto                  |
