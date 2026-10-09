@@ -2022,7 +2022,7 @@ function get_time_interval_string(int $time1, int $time2, string $format = '',
         if ($fullformat) {
             $formatkey .= 'full';
         }
-        $format = get_string($formatkey, 'langconfig');
+        $format = get_string($formatkey, 'calendar');
     }
     return $interval->format($format);
 }

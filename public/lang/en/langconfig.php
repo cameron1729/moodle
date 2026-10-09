@@ -17,6 +17,10 @@
 /**
  * Strings for component 'core_langconfig', language 'en', branch 'MOODLE_20_STABLE'
  *
+ * The questioniconfollowlangdirection setting controls whether the question icon follows the language direction.
+ * In RTL languages such as Arabic, it should be 'yes' so the question mark is flipped.
+ * For Hebrew, the question mark should not be flipped, so it should be 'no'.
+ *
  * @package   core
  * @copyright 1999 onwards Martin Dougiamas  {@link http://moodle.com}
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -26,7 +30,51 @@ $string['alphabet'] = 'A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z';
 $string['am'] = 'am';
 $string['amcaps'] = 'AM';
 $string['backupnameformat'] = '%Y%m%d-%H%M';
-// See https://www.php.net/manual/en/dateinterval.format.php for format used in dateintervalxx strings.
+$string['decsep'] = '.';
+$string['firstdayofweek'] = '1';
+$string['iso6391'] = 'en';
+$string['iso6392'] = 'eng';
+$string['labelsep'] = ': ';
+$string['listsep'] = ',';
+$string['locale'] = 'en_AU.UTF-8';
+$string['localecldr'] = 'en-AU';
+$string['localewin'] = 'English_Australia.1252';
+$string['localewincharset'] = '';
+$string['oldcharset'] = 'ISO-8859-1';
+$string['parentlanguage'] = '';
+$string['pm'] = 'pm';
+$string['pmcaps'] = 'PM';
+$string['questioniconfollowlangdirection'] = 'yes';
+$string['strftimedate'] = '%d %B %Y';
+$string['strftimedatefullshort'] = '%d/%m/%y';
+$string['strftimedatemonthabbr'] = '%d %b %Y';
+$string['strftimedatemonthtimeshort'] = '%d %b %Y, %I:%M';
+$string['strftimedatemonthtimeshort24'] = '%d %b %Y, %H:%M';
+$string['strftimedateshort'] = '%d %B';
+$string['strftimedateshortmonthabbr'] = '%d %b';
+$string['strftimedatetime'] = '%d %B %Y, %I:%M %p';
+$string['strftimedatetimeaccurate'] = '%d %B %Y, %I:%M:%S %p';
+$string['strftimedatetimeshort'] = '%d/%m/%y, %H:%M';
+$string['strftimedatetimeshortaccurate'] = '%d/%m/%y, %H:%M:%S';
+$string['strftimedaydate'] = '%A, %d %B %Y';
+$string['strftimedaydatetime'] = '%A, %d %B %Y, %I:%M %p';
+$string['strftimedayshort'] = '%A, %d %B';
+$string['strftimedaytime'] = '%a, %H:%M';
+$string['strftimemonth'] = '%B';
+$string['strftimemonthyear'] = '%B %Y';
+$string['strftimerecent'] = '%d %b, %H:%M';
+$string['strftimerecentfull'] = '%a, %d %b %Y, %I:%M %p';
+$string['strftimetime'] = '%I:%M %p';
+$string['strftimetime12'] = '%I:%M %p';
+$string['strftimetime24'] = '%H:%M';
+$string['strftimeyear'] = '%Y';
+$string['thisdirection'] = 'ltr';
+$string['thisdirectionvertical'] = 'btt';
+$string['thislanguage'] = 'English';
+$string['thislanguageint'] = 'English';
+$string['thousandssep'] = ',';
+
+// Deprecated since Moodle 6.0.
 $string['dateintervalday'] = '%ad';
 $string['dateintervaldayfull'] = '%a days';
 $string['dateintervaldayhr'] = '%ad %hh';
@@ -153,49 +201,3 @@ $string['dateintervalyrmosec'] = '%yy %mmo %ss';
 $string['dateintervalyrmosecfull'] = '%y years %m months %s seconds';
 $string['dateintervalyrsec'] = '%yy %ss';
 $string['dateintervalyrsecfull'] = '%y years %s seconds';
-$string['decsep'] = '.';
-$string['firstdayofweek'] = '1';
-$string['iso6391'] = 'en';
-$string['iso6392'] = 'eng';
-$string['labelsep'] = ': ';
-$string['listsep'] = ',';
-$string['locale'] = 'en_AU.UTF-8';
-$string['localecldr'] = 'en-AU';
-$string['localewin'] = 'English_Australia.1252';
-$string['localewincharset'] = '';
-$string['oldcharset'] = 'ISO-8859-1';
-$string['parentlanguage'] = '';
-$string['pm'] = 'pm';
-$string['pmcaps'] = 'PM';
-// Whether the question icon follows the language direction.
-// E.g. In some RTL languages, like Arabic, it needs to be set to 'yes' so the question mark is flipped.
-// But for Hebrew, the question mark character is not flipped, so it needs to be set to 'no'.
-$string['questioniconfollowlangdirection'] = 'yes';
-$string['strftimedate'] = '%d %B %Y';
-$string['strftimedatemonthabbr'] = '%d %b %Y';
-$string['strftimedatemonthtimeshort'] = '%d %b %Y, %I:%M';
-$string['strftimedatemonthtimeshort24'] = '%d %b %Y, %H:%M';
-$string['strftimedatefullshort'] = '%d/%m/%y';
-$string['strftimedateshort'] = '%d %B';
-$string['strftimedateshortmonthabbr'] = '%d %b';
-$string['strftimedatetime'] = '%d %B %Y, %I:%M %p';
-$string['strftimedatetimeaccurate'] = '%d %B %Y, %I:%M:%S %p';
-$string['strftimedatetimeshort'] = '%d/%m/%y, %H:%M';
-$string['strftimedatetimeshortaccurate'] = '%d/%m/%y, %H:%M:%S';
-$string['strftimedaydate'] = '%A, %d %B %Y';
-$string['strftimedaydatetime'] = '%A, %d %B %Y, %I:%M %p';
-$string['strftimedayshort'] = '%A, %d %B';
-$string['strftimedaytime'] = '%a, %H:%M';
-$string['strftimemonth'] = '%B';
-$string['strftimemonthyear'] = '%B %Y';
-$string['strftimerecent'] = '%d %b, %H:%M';
-$string['strftimeyear'] = '%Y';
-$string['strftimerecentfull'] = '%a, %d %b %Y, %I:%M %p';
-$string['strftimetime'] = '%I:%M %p';
-$string['strftimetime12'] = '%I:%M %p';
-$string['strftimetime24'] = '%H:%M';
-$string['thisdirection'] = 'ltr';
-$string['thisdirectionvertical'] = 'btt';
-$string['thislanguage'] = 'English';
-$string['thislanguageint'] = 'English';
-$string['thousandssep'] = ',';
