@@ -41,10 +41,10 @@
 <div class="mt-4" data-region="day-container" data-day-id="{{timestamp}}">
     <h6 class="text-center mb-4 day">
         {{#currentyear}}
-            {{#userdate}} {{timestamp}}, {{#str}} strftimedateshort, core_langconfig {{/str}} {{/userdate}}
+            {{#userdate}} {{timestamp}}, {{#str}} strftimedateshort, core_calendar {{/str}} {{/userdate}}
         {{/currentyear}}
         {{^currentyear}}
-            {{#userdate}} {{timestamp}}, {{#str}} strftimedate, core_langconfig {{/str}} {{/userdate}}
+            {{#userdate}} {{timestamp}}, {{#str}} strftimedate, core_calendar {{/str}} {{/userdate}}
         {{/currentyear}}
     </h6>
     {{> core_message/message_drawer_view_conversation_body_messages }}

@@ -103,7 +103,7 @@ final class send_oauth2_secret_expired_notification_adhoc_task_test extends \adv
         $this->assertEquals('oauth2_secret_expired', $message->eventtype);
         $this->assertEquals(1, $message->notification);
 
-        $expecteddatetime = userdate($secretexpiredtime, get_string('strftimedatetime', 'langconfig'));
+        $expecteddatetime = userdate($secretexpiredtime, get_string('strftimedatetime', 'calendar'));
 
         $this->assertEquals(
             get_string('oauth2server_secretexpirednotificationsubject', 'admin', $clientname),
@@ -163,7 +163,7 @@ final class send_oauth2_secret_expired_notification_adhoc_task_test extends \adv
 
         $expecteddatetime = userdate(
             $secretexpiredtime,
-            get_string('strftimedatetime', 'langconfig'),
+            get_string('strftimedatetime', 'calendar'),
             'Pacific/Auckland',
         );
 

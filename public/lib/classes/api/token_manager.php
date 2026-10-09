@@ -221,7 +221,7 @@ class token_manager {
         // An exact moment rather than a whole day, so the time is shown too. Not userdate()'s
         // default, which prefixes the weekday: it is three words of column width that nobody
         // reads off a token, and these dates sit in a table beside four other columns.
-        return userdate($timestamp, get_string('strftimedatetime', 'langconfig'));
+        return userdate($timestamp, get_string('strftimedatetime', 'calendar'));
     }
 
     /**

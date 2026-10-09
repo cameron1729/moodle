@@ -94,8 +94,8 @@ final class generator_test extends \advanced_testcase {
                 $closing,
             ],
             'Human date' => [
-                userdate($opening, get_string('strftimedatetimeaccurate', 'langconfig')),
-                userdate($closing, get_string('strftimedatetimeaccurate', 'langconfig')),
+                userdate($opening, get_string('strftimedatetimeaccurate', 'calendar')),
+                userdate($closing, get_string('strftimedatetimeaccurate', 'calendar')),
                 $opening,
                 $closing,
             ],

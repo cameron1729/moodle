@@ -619,7 +619,7 @@ class manager {
             $c->content     = $u->ccontent;
             $c->format      = $u->cformat;
             $c->timecreated = $u->ctimecreated;
-            $c->strftimeformat = get_string('strftimerecentfull', 'langconfig');
+            $c->strftimeformat = get_string('strftimerecentfull', 'calendar');
             $url = new moodle_url('/user/view.php', ['id' => $u->id, 'course' => $this->courseid]);
             $c->profileurl = $url->out(false); // URL should not be escaped just yet.
             $c->fullname = fullname($u);
@@ -758,7 +758,7 @@ class manager {
         $cmtid = $DB->insert_record('comments', $newcmt);
         if (!empty($cmtid)) {
             $newcmt->id = $cmtid;
-            $newcmt->strftimeformat = get_string('strftimerecentfull', 'langconfig');
+            $newcmt->strftimeformat = get_string('strftimerecentfull', 'calendar');
             $newcmt->fullname = fullname($USER);
             $url = new moodle_url('/user/view.php', ['id' => $USER->id, 'course' => $this->courseid]);
             $newcmt->profileurl = $url->out();

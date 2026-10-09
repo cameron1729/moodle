@@ -95,7 +95,7 @@ if ($options['showsql'] || !empty($CFG->showcronsql)) {
 if ($options['list']) {
     cli_heading("List of scheduled tasks ($CFG->wwwroot)");
 
-    $shorttime = get_string('strftimedatetimeshort');
+    $shorttime = get_string('strftimedatetimeshort', 'calendar');
 
     $tasks = \core\task\manager::get_all_scheduled_tasks();
     echo str_pad(get_string('scheduledtasks', 'tool_task'), 50, ' ') . ' ' . str_pad(get_string('runpattern', 'tool_task'), 17, ' ')

@@ -50,7 +50,7 @@ function calendar_day_representation($tstamp, $now = false, $usecommonwords = tr
     \core\deprecation::emit_deprecation(__FUNCTION__);
 
     if (empty($shortformat)) {
-        $shortformat = get_string('strftimedayshort');
+        $shortformat = get_string('strftimedayshort', 'calendar');
     }
 
     if ($now === false) {

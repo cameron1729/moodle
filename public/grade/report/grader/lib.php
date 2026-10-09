@@ -811,7 +811,7 @@ class grade_report_grader extends grade_report {
         $quickgrading = $this->get_pref('quickgrading');
 
         // Get strings which are re-used inside the loop.
-        $strftimedatetimeshort = get_string('strftimedatetimeshort');
+        $strftimedatetimeshort = get_string('strftimedatetimeshort', 'calendar');
         $strerror = get_string('error');
         $stroverridengrade = get_string('overridden', 'grades');
         $strfail = get_string('fail', 'grades');

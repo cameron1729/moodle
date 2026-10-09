@@ -3666,7 +3666,7 @@ abstract class enrol_plugin {
         $a = new stdClass();
         $a->coursename = format_string($course->fullname, true, ['context' => $context, 'escape' => false]);
         $a->courselink = course_get_url($course)->out();
-        $a->coursestartdate = userdate($course->startdate, get_string('strftimedatetime', 'core_langconfig'));
+        $a->coursestartdate = userdate($course->startdate, get_string('strftimedatetime', 'core_calendar'));
         $a->profileurl = \core\user::get_profile_url($user, $context)->out();
 
         $placeholders = \core_user::get_name_placeholders($user);

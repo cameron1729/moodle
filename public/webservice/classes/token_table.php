@@ -145,7 +145,7 @@ class token_table extends \table_sql {
         if (empty($data->validuntil)) {
             return get_string('validuntil_empty', 'webservice');
         } else {
-            return userdate($data->validuntil, get_string('strftimedatetime', 'langconfig'));
+            return userdate($data->validuntil, get_string('strftimedatetime', 'calendar'));
         }
     }
 
@@ -159,7 +159,7 @@ class token_table extends \table_sql {
         if (empty($data->lastaccess)) {
             return get_string('never');
         } else {
-            return userdate($data->lastaccess, get_string('strftimedatetime', 'langconfig'));
+            return userdate($data->lastaccess, get_string('strftimedatetime', 'calendar'));
         }
     }
 

@@ -38,7 +38,7 @@ class send_oauth2_secret_expired_notification_adhoc_task extends adhoc_task {
         $data = $this->get_custom_data();
 
         // Formatted string representation of the secret expiry datetime in the recipient user's timezone.
-        $secretexpireddatetime = userdate($data->secretexpiredtime, get_string('strftimedatetime', 'langconfig'));
+        $secretexpireddatetime = userdate($data->secretexpiredtime, get_string('strftimedatetime', 'calendar'));
 
         $managesecretsurl = \core\router\util::get_path_for_callable(
             [\core_admin\route\controller\oauth2\server\client_management::class, 'manage_client_secrets'],

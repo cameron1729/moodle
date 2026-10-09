@@ -138,7 +138,7 @@ class course_badges extends system_report {
                 if (!$value) {
                     return '';
                 }
-                $format = get_string('strftimedatefullshort', 'core_langconfig');
+                $format = get_string('strftimedatefullshort', 'core_calendar');
                 $date = $value ? userdate($value, $format) : '';
                 $badgeurl = new moodle_url('/badges/badge.php', ['hash' => $row->uniquehash]);
                 $icon = new pix_icon('i/valid', get_string('dateearned', 'badges', $date));

@@ -67,7 +67,7 @@ if ($ADMIN->fulltree) {
     // Pre-create attempt period.
     $precreateoptions = [get_string('precreateoff', 'quiz')];
     for ($i = 1; $i <= 24; $i++) {
-        $precreateoptions[$i * HOURSECS] = sprintf(get_string('dateintervalhrfull', 'langconfig'), $i);
+        $precreateoptions[$i * HOURSECS] = sprintf(get_string('dateintervalhrfull', 'calendar'), $i);
     }
     $setting = new admin_setting_configselect(
         'quiz/precreateperiod',

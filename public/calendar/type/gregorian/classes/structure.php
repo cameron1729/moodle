@@ -293,7 +293,7 @@ class structure extends type_base {
         global $CFG;
 
         if (empty($format)) {
-            $format = get_string('strftimedaydatetime', 'langconfig');
+            $format = get_string('strftimedaydatetime', 'calendar');
         }
 
         // Note: This historical logic was about fixing 12-hour time to remove

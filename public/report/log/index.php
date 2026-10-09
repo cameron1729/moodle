@@ -232,7 +232,7 @@ if (empty($readers)) {
                 $userinfo = fullname($u, has_capability('moodle/site:viewfullnames', $context));
             }
             if ($date) {
-                $dateinfo = userdate($date, get_string('strftimedaydate'));
+                $dateinfo = userdate($date, get_string('strftimedaydate', 'calendar'));
             }
             if (!empty($course) && ($course->id != SITEID)) {
                 $PAGE->navbar->add("$userinfo, $dateinfo");

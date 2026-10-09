@@ -73,7 +73,7 @@ async function getFormattedTimestamps(timestamps, formatStringKey) {
   if (unique.length === 0) {
     return /* @__PURE__ */ new Map();
   }
-  const format = await getString(formatStringKey, "langconfig");
+  const format = await getString(formatStringKey, "calendar");
   const [result] = await fetchMany([{
     methodname: "core_get_user_dates",
     args: {

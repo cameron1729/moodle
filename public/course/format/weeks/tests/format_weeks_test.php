@@ -114,7 +114,7 @@ final class format_weeks_test extends \advanced_testcase {
             } else {
                 $dates = $courseformat->get_section_dates($section);
                 $dates->end = ($dates->end - 86400);
-                $dateformat = get_string('strftimedateshort');
+                $dateformat = get_string('strftimedateshort', 'calendar');
                 $weekday = userdate($dates->start, $dateformat);
                 $endweekday = userdate($dates->end, $dateformat);
                 $sectionname = $weekday.' - '.$endweekday;

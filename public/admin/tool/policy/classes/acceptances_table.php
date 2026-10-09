@@ -577,7 +577,7 @@ class acceptances_table extends \table_sql {
                 return date_format_string((int) $row->timemodified, '%Y-%m-%d %H:%M:%S %Z');
             } else {
                 // Use localised calendar format.
-                return userdate($row->timemodified, get_string('strftimedatetime'));
+                return userdate($row->timemodified, get_string('strftimedatetime', 'calendar'));
             }
         } else {
             return null;

@@ -596,7 +596,7 @@ function forum_print_recent_activity($course, $viewfullnames, $timestart) {
 
     $modinfo = get_fast_modinfo($course);
 
-    $strftimerecent = get_string('strftimerecent');
+    $strftimerecent = get_string('strftimerecent', 'calendar');
 
     $managerfactory = mod_forum\local\container::get_manager_factory();
     $entityfactory = mod_forum\local\container::get_entity_factory();

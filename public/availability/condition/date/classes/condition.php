@@ -209,8 +209,7 @@ class condition extends \core_availability\condition {
             $daybefore = true;
             $time = strtotime('-1 day', $time);
         }
-        return userdate($time,
-                get_string($dateonly ? 'strftimedate' : 'strftimedatetime', 'langconfig'));
+        return userdate($time, get_string($dateonly ? 'strftimedate' : 'strftimedatetime', 'calendar'));
     }
 
     /**

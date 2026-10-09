@@ -17,6 +17,10 @@
 /**
  * Strings for component 'core_langconfig', language 'en', branch 'MOODLE_20_STABLE'
  *
+ * The questioniconfollowlangdirection setting controls whether the question icon follows the language direction.
+ * In RTL languages such as Arabic, it should be 'yes' so the question mark is flipped.
+ * For Hebrew, the question mark should not be flipped, so it should be 'no'.
+ *
  * @package   core
  * @copyright 1999 onwards Martin Dougiamas  {@link http://moodle.com}
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -167,9 +171,6 @@ $string['oldcharset'] = 'ISO-8859-1';
 $string['parentlanguage'] = '';
 $string['pm'] = 'pm';
 $string['pmcaps'] = 'PM';
-// Whether the question icon follows the language direction.
-// E.g. In some RTL languages, like Arabic, it needs to be set to 'yes' so the question mark is flipped.
-// But for Hebrew, the question mark character is not flipped, so it needs to be set to 'no'.
 $string['questioniconfollowlangdirection'] = 'yes';
 $string['strftimedate'] = '%d %B %Y';
 $string['strftimedatemonthabbr'] = '%d %b %Y';

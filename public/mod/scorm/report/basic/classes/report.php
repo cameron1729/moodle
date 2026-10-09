@@ -407,12 +407,12 @@ class report extends \mod_scorm\report {
                             $row[] = $scouser->attempt;
                         }
                         if ($download == 'ODS' || $download == 'Excel' ) {
-                            $row[] = userdate($timetracks->start, get_string("strftimedatetime", "langconfig"));
+                            $row[] = userdate($timetracks->start, get_string("strftimedatetime", "calendar"));
                         } else {
                             $row[] = userdate($timetracks->start);
                         }
                         if ($download == 'ODS' || $download == 'Excel' ) {
-                            $row[] = userdate($timetracks->finish, get_string('strftimedatetime', 'langconfig'));
+                            $row[] = userdate($timetracks->finish, get_string('strftimedatetime', 'calendar'));
                         } else {
                             $row[] = userdate($timetracks->finish);
                         }
