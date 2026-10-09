@@ -403,8 +403,8 @@ function report_log_print_mnet_selector_form($hostid, $course, $selecteduser=0, 
         }
     }
 
-    $strftimedate = get_string("strftimedate");
-    $strftimedaydate = get_string("strftimedaydate");
+    $strftimedate = get_string("strftimedate", 'calendar');
+    $strftimedaydate = get_string("strftimedaydate", 'calendar');
 
     asort($users);
 

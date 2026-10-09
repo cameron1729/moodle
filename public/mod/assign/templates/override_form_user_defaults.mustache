@@ -22,19 +22,19 @@
 <dl>
     <dt>{{#str}} allowsubmissionsfromdate, mod_assign {{/str}}</dt>
     <dl>
-        {{#allowsubmissionsfromdate}} {{#userdate}} {{.}}, {{#str}} strftimedatetime, core_langconfig {{/str}} {{/userdate}} {{/allowsubmissionsfromdate}}
+        {{#allowsubmissionsfromdate}} {{#userdate}} {{.}}, {{#str}} strftimedatetime, core_calendar {{/str}} {{/userdate}} {{/allowsubmissionsfromdate}}
         {{^allowsubmissionsfromdate}} {{#str}} disabled, mod_assign {{/str}} {{/allowsubmissionsfromdate}}
     </dl>
 
     <dt>{{#str}} duedate, mod_assign {{/str}}</dt>
     <dl>
-        {{#duedate}} {{#userdate}} {{.}}, {{#str}} strftimedatetime, core_langconfig {{/str}} {{/userdate}} {{/duedate}}
+        {{#duedate}} {{#userdate}} {{.}}, {{#str}} strftimedatetime, core_calendar {{/str}} {{/userdate}} {{/duedate}}
         {{^duedate}} {{#str}} disabled, mod_assign {{/str}} {{/duedate}}
     </dl>
 
     <dt>{{#str}} cutoffdate, mod_assign {{/str}}</dt>
     <dl>
-        {{#cutoffdate}} {{#userdate}} {{cutoffdate}}, {{#str}} strftimedatetime, core_langconfig {{/str}} {{/userdate}} {{/cutoffdate}}
+        {{#cutoffdate}} {{#userdate}} {{cutoffdate}}, {{#str}} strftimedatetime, core_calendar {{/str}} {{/userdate}} {{/cutoffdate}}
         {{^cutoffdate}} {{#str}} disabled, mod_assign {{/str}} {{/cutoffdate}}
     </dl>
 </dl>

@@ -72,9 +72,9 @@ class policydoc extends moodleform {
         $mform->addElement('select', 'audience', get_string('policydocaudience', 'tool_policy'), $options);
 
         if (empty($formdata->id)) {
-            $default = userdate(time(), get_string('strftimedate', 'core_langconfig'));
+            $default = userdate(time(), get_string('strftimedate', 'core_calendar'));
         } else {
-            $default = userdate($formdata->timecreated, get_string('strftimedate', 'core_langconfig'));
+            $default = userdate($formdata->timecreated, get_string('strftimedate', 'core_calendar'));
         }
         $mform->addElement('text', 'revision', get_string('policydocrevision', 'tool_policy'),
             ['maxlength' => 1333, 'placeholder' => $default]);

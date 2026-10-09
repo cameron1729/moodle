@@ -88,7 +88,7 @@ class token extends base {
         ))
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_field("{$tokenalias}.validuntil")
-            ->add_callback([format::class, 'userdate'], get_string('strftimedatetime', 'core_langconfig'))
+            ->add_callback([format::class, 'userdate'], get_string('strftimedatetime', 'core_calendar'))
             ->add_callback(fn($value) => $value ?: get_string('validuntil_empty', 'core_webservice'));
 
         // Last access column.

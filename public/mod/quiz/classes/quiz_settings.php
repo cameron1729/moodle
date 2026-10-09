@@ -517,7 +517,7 @@ class quiz_settings {
 
         if ($short) {
             $langstrsuffix = 'short';
-            $dateformat = get_string('strftimedatetimeshort', 'langconfig');
+            $dateformat = get_string('strftimedatetimeshort', 'calendar');
         } else {
             $langstrsuffix = '';
             $dateformat = '';

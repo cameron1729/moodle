@@ -104,7 +104,7 @@ class block_news_items extends block_base {
 
         /// Actually create the listing now
 
-            $strposttimeformat = get_string('strftimedatetime', 'core_langconfig');
+            $strposttimeformat = get_string('strftimedatetime', 'core_calendar');
             $strmore = get_string('more', 'forum');
 
         /// Accessibility: markup as a list.

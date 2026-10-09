@@ -38,7 +38,7 @@ require_once($CFG->dirroot.'/backup/util/helper/backup_cron_helper.class.php');
 
 admin_externalpage_setup('reportbackups', '', null, '', array('pagelayout'=>'report'));
 
-$strftimedatetime = get_string('strftimerecent');
+$strftimedatetime = get_string('strftimerecent', 'calendar');
 $strerror = get_string('error');
 $strok = get_string('statusok');
 $strunfinished = get_string('unfinished');

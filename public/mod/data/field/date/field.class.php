@@ -210,7 +210,7 @@ class data_field_date extends data_field_base {
         if (!$content || empty($content->content)) {
             return '';
         }
-        return userdate($content->content, get_string('strftimedate'), 0);
+        return userdate($content->content, get_string('strftimedate', 'calendar'), 0);
     }
 
     function get_sort_sql($fieldname) {

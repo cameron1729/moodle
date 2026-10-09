@@ -192,7 +192,7 @@ export const setUserPreference = (name: string, value: string): void => {
 };
 
 /**
- * Fetch server-formatted date strings for the given timestamps, using a langconfig
+ * Fetch server-formatted date strings for the given timestamps, using a calendar
  * strftime format string.
  *
  * Calls core_get_user_dates so the format respects the site language and the
@@ -202,14 +202,14 @@ export const setUserPreference = (name: string, value: string): void => {
  * so every fetch path enriches its events with this afterwards.
  *
  * @param timestamps timestamps to format.
- * @param formatStringKey langconfig string identifier naming the strftime format to use.
+ * @param formatStringKey calendar string identifier naming the strftime format to use.
  */
 async function getFormattedTimestamps(timestamps: number[], formatStringKey: string): Promise<Map<number, string>> {
     const unique = [...new Set(timestamps)];
     if (unique.length === 0) {
         return new Map();
     }
-    const format = await getString(formatStringKey, 'langconfig');
+    const format = await getString(formatStringKey, 'calendar');
     const [result] = await fetchMany<{dates: string[]}>([{
         methodname: 'core_get_user_dates',
         args: {

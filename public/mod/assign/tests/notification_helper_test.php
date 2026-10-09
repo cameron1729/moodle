@@ -978,7 +978,7 @@ final class notification_helper_test extends \advanced_testcase {
         $this->assertStringNotContainsString($assignment4->name, $message->fullmessagehtml);
 
         // Check the message contains the formatted due date.
-        $formatteddate = userdate($duedate1, get_string('strftimedaydate', 'langconfig'));
+        $formatteddate = userdate($duedate1, get_string('strftimedaydate', 'calendar'));
         $this->assertStringContainsString($formatteddate, $message->fullmessagehtml);
 
         // Check the subject matches.

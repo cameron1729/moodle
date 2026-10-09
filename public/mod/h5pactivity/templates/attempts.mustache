@@ -53,7 +53,7 @@
                 "success": 1,
                 "successicon": "<i class=\"icon fa fa-check-circle fa-fw \"><\/i>",
                 "scaled": 1,
-                "reporturl": {},
+                "reporturl": "https://example.com/mod/h5pactivity/report.php?a=1&attemptid=7",
                 "score": "6 out of 6"
             },
             {
@@ -72,7 +72,7 @@
                 "success": 0,
                 "successicon": "<i class=\"icon fa fa-circle-o fa-fw \"><\/i>",
                 "scaled": 0,
-                "reporturl": {},
+                "reporturl": "https://example.com/mod/h5pactivity/report.php?a=1&attemptid=8",
                 "score": "1 out of 6"
             },
             {
@@ -91,7 +91,7 @@
                 "success": 0,
                 "successicon": "<i class=\"icon fa fa-circle-o fa-fw \"><\/i>",
                 "scaled": 0,
-                "reporturl": {},
+                "reporturl": "https://example.com/mod/h5pactivity/report.php?a=1&attemptid=9",
                 "score": "3 out of 6"
             }
         ]
@@ -117,10 +117,10 @@
       <th scope="row">{{attempt}}</th>
       <td>
         <span class="d-none d-lg-inline">
-          {{#userdate}} {{timemodified}}, {{#str}} strftimedatetime, core_langconfig {{/str}} {{/userdate}}
+          {{#userdate}} {{timemodified}}, {{#str}} strftimedatetime, core_calendar {{/str}} {{/userdate}}
         </span>
         <span class="d-inline d-lg-none">
-          {{#userdate}} {{timemodified}}, {{#str}} strftimedatetimeshort, core_langconfig {{/str}} {{/userdate}}
+          {{#userdate}} {{timemodified}}, {{#str}} strftimedatetimeshort, core_calendar {{/str}} {{/userdate}}
         </span>
       </td>
       <td>{{rawscore}}<span class="d-inline d-md-none"> / {{maxscore}}</span></td>

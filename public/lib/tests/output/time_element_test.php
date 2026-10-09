@@ -145,7 +145,7 @@ final class time_element_test extends \advanced_testcase {
                 . '{{$datedisplay}}A custom date label{{/datedisplay}}'
                 . '{{/core/time_element}}',
             'core/translated' => '{{< core/time_element }}'
-                . '{{$datetimeformatval}}{{#str}}strftimetime24, langconfig{{/str}}{{/datetimeformatval}}'
+                . '{{$datetimeformatval}}{{#str}}strftimetime24, calendar{{/str}}{{/datetimeformatval}}'
                 . '{{$datedisplay}}A custom date label{{/datedisplay}}'
                 . '{{/core/time_element}}',
         ]));

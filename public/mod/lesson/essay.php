@@ -417,8 +417,8 @@ switch ($mode) {
 
                     // link for each essay
                     $url = new moodle_url('/mod/lesson/essay.php', array('id'=>$cm->id,'mode'=>'grade','attemptid'=>$essay->id,'sesskey'=>sesskey()));
-                    $linktitle = userdate($essay->timeseen, get_string('strftimedatetime')).' '.
-                            format_string($pages[$essay->pageid]->title, true);
+                    $linktitle = userdate($essay->timeseen, get_string('strftimedatetime', 'calendar')) . ' ' .
+                        format_string($pages[$essay->pageid]->title, true);
 
                     // Different colors for all the states of an essay (graded, if sent, not graded)
                     if (!$essayinfo->graded) {

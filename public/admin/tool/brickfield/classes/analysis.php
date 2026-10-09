@@ -87,7 +87,7 @@ class analysis {
      */
     public static function redirect_message() {
         $epoch = new process_analysis_requests;
-        $time = userdate($epoch->get_next_scheduled_time(), get_string('strftimetime', 'core_langconfig'));
+        $time = userdate($epoch->get_next_scheduled_time(), get_string('strftimetime', 'core_calendar'));
         $message = get_string('confirmationmessage', manager::PLUGINNAME, $time);
 
         return $message;

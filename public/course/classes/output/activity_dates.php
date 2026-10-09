@@ -50,7 +50,7 @@ class activity_dates implements renderable, templatable {
         $activitydates = [];
         foreach ($this->activitydates as $date) {
             if (empty($date['relativeto'])) {
-                $date['datestring'] = userdate($date['timestamp'], get_string('strftimedaydatetime', 'core_langconfig'));
+                $date['datestring'] = userdate($date['timestamp'], get_string('strftimedaydatetime', 'core_calendar'));
             } else {
                 $diffstr = get_time_interval_string($date['timestamp'], $date['relativeto']);
                 if ($date['timestamp'] >= $date['relativeto']) {

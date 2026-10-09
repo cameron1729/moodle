@@ -122,12 +122,12 @@ $strcalendar = get_string('calendar', 'calendar');
 
 switch($view) {
     case 'day':
-        $PAGE->navbar->add(userdate($time, get_string('strftimedate')));
-        $pagetitle = get_string('dayviewtitle', 'calendar', userdate($time, get_string('strftimedaydate')));
+        $PAGE->navbar->add(userdate($time, get_string('strftimedate', 'calendar')));
+        $pagetitle = get_string('dayviewtitle', 'calendar', userdate($time, get_string('strftimedaydate', 'calendar')));
     break;
     case 'month':
-        $PAGE->navbar->add(userdate($time, get_string('strftimemonthyear')));
-        $pagetitle = get_string('detailedmonthviewtitle', 'calendar', userdate($time, get_string('strftimemonthyear')));
+        $PAGE->navbar->add(userdate($time, get_string('strftimemonthyear', 'calendar')));
+        $pagetitle = get_string('detailedmonthviewtitle', 'calendar', userdate($time, get_string('strftimemonthyear', 'calendar')));
     break;
     case 'upcoming':
         $pagetitle = get_string('upcomingevents', 'calendar');

@@ -132,7 +132,7 @@ class week_day_exporter extends day_exporter {
     protected function get_popover_title() {
         $title = null;
 
-        $userdate = userdate($this->data[0], get_string('strftimedayshort'));
+        $userdate = userdate($this->data[0], get_string('strftimedayshort', 'calendar'));
         if (count($this->related['events'])) {
             $title = get_string('eventsfor', 'calendar', $userdate);
         } else if ($this->data['istoday']) {
@@ -152,7 +152,7 @@ class week_day_exporter extends day_exporter {
      * @return string
      */
     protected function get_day_title(): string {
-        $userdate = userdate($this->data[0], get_string('strftimedayshort'));
+        $userdate = userdate($this->data[0], get_string('strftimedayshort', 'calendar'));
 
         $numevents = count($this->related['events']);
         if ($numevents == 1) {

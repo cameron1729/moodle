@@ -143,9 +143,9 @@ class report_log_table_log extends table_sql {
     public function col_time($event) {
 
         if (empty($this->download)) {
-            $dateformat = get_string('strftimedatetimeaccurate', 'core_langconfig');
+            $dateformat = get_string('strftimedatetimeaccurate', 'core_calendar');
         } else {
-            $dateformat = get_string('strftimedatetimeshortaccurate', 'core_langconfig');
+            $dateformat = get_string('strftimedatetimeshortaccurate', 'core_calendar');
         }
         return userdate($event->timecreated, $dateformat);
     }

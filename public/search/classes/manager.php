@@ -1324,8 +1324,8 @@ class manager {
 
                 $partialtext = '';
                 if ($partial) {
-                    $partialtext = ' (not complete; done to ' . userdate($lastindexeddoc,
-                            get_string('strftimedatetimeshort', 'langconfig')) . ')';
+                    $partialtext = ' (not complete; done to ' .
+                        userdate($lastindexeddoc, get_string('strftimedatetimeshort', 'calendar')) . ')';
                 }
 
                 $progress->output('Processed ' . $numrecords . ' records containing ' . $numdocs .

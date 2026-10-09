@@ -206,7 +206,7 @@ class oauth2_server_clients extends system_report {
             ->set_is_sortable(true)
             ->set_help_icon(new help_icon('oauth2server_createdcolumn', 'admin', \core_date::get_user_timezone()))
             ->add_callback(function ($value) {
-                return $value ? userdate($value, get_string('strftimedatemonthtimeshort24', 'langconfig')) : '-';
+                return $value ? userdate($value, get_string('strftimedatemonthtimeshort24', 'calendar')) : '-';
             }));
 
         // Last Accessed.
@@ -220,7 +220,7 @@ class oauth2_server_clients extends system_report {
             ->add_fields('client.lastaccessed')
             ->set_is_sortable(true)
             ->add_callback(function ($value) {
-                return $value ? userdate($value, get_string('strftimedatemonthtimeshort24', 'langconfig')) : '-';
+                return $value ? userdate($value, get_string('strftimedatemonthtimeshort24', 'calendar')) : '-';
             }));
 
         // Custom Actions.

@@ -138,7 +138,7 @@ class external_badge implements renderable {
                 $data->expireddate = $this->issued->assertion->expires;
                 $data->expireddateformatted = userdate(
                     $this->issued->assertion->expires,
-                    get_string('strftimedatetime', 'langconfig')
+                    get_string('strftimedatetime', 'calendar')
                 );
             } else {
                 $data->expiredate = $this->issued->assertion->expires;

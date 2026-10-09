@@ -57,7 +57,11 @@ class award_criteria_courseset extends award_criteria {
             } else {
                 $str = html_writer::tag('b', '"' . $coursename . '"');
                 if (isset($p['bydate'])) {
-                    $str .= get_string('criteria_descr_bydate', 'badges', userdate($p['bydate'], get_string('strftimedate', 'core_langconfig')));
+                    $str .= get_string(
+                        'criteria_descr_bydate',
+                        'badges',
+                        userdate($p['bydate'], get_string('strftimedate', 'core_calendar')),
+                    );
                 }
                 if (isset($p['grade'])) {
                     $str .= get_string('criteria_descr_grade', 'badges', $p['grade']);

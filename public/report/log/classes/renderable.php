@@ -534,8 +534,8 @@ class report_log_renderable implements renderable {
     public function get_date_options() {
         global $SITE;
 
-        $strftimedate = get_string("strftimedate");
-        $strftimedaydate = get_string("strftimedaydate");
+        $strftimedate = get_string("strftimedate", 'calendar');
+        $strftimedaydate = get_string("strftimedaydate", 'calendar');
 
         // Get all the possible dates.
         // Note that we are keeping track of real (GMT) time and user time.
