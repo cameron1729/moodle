@@ -536,7 +536,7 @@ class core_admin_renderer extends plugin_renderer_base {
                 get_string('checkforupdates', 'core_plugin')
             );
             if ($timefetched = $checker->get_last_timefetched()) {
-                $timefetched = userdate($timefetched, get_string('strftimedatetime', 'core_langconfig'));
+                $timefetched = userdate($timefetched, get_string('strftimedatetime', 'core_calendar'));
                 $output .= $this->container(get_string('checkforupdateslast', 'core_plugin', $timefetched),
                     'lasttimefetched small text-muted mt-1');
             }

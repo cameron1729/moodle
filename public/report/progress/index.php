@@ -183,7 +183,7 @@ if ($dataformat !== '' && $grandtotal && count($activities) > 0) {
         if ($activity->completionexpected) {
             $datetext = $dataformat
                 ? userdate($activity->completionexpected, "%F %T")
-                : userdate($activity->completionexpected, get_string('strftimedate', 'langconfig'));
+                : userdate($activity->completionexpected, get_string('strftimedate', 'calendar'));
         } else {
             $datetext = '';
         }
@@ -400,7 +400,7 @@ foreach($activities as $activity) {
     $datepassedclass = $datepassed ? 'completion-expired' : '';
 
     if ($activity->completionexpected && !$dataformat) {
-        $datetext = userdate($activity->completionexpected, get_string('strftimedate', 'langconfig'));
+        $datetext = userdate($activity->completionexpected, get_string('strftimedate', 'calendar'));
     } else {
         $datetext = get_string('completed');
     }

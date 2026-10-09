@@ -63,6 +63,6 @@ class date extends datebase {
      * @return string
      */
     public function format_value($value, array $values, array $callbacks, int $columntype): string {
-        return format::userdate($value, (object) [], get_string('strftimedaydate', 'core_langconfig'));
+        return format::userdate($value, (object) [], get_string('strftimedaydate', 'core_calendar'));
     }
 }

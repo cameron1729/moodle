@@ -238,7 +238,7 @@ class api {
 
         foreach ($versions as $version) {
             if ($version->revision === '') {
-                $version->revision = userdate($version->timecreated, get_string('strftimedate', 'core_langconfig'));
+                $version->revision = userdate($version->timecreated, get_string('strftimedate', 'core_calendar'));
             }
             $byrev[$version->revision][$version->id] = true;
         }

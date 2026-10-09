@@ -70,7 +70,7 @@ if ($data) {
     }
 
     // Get the date the email will be sent.
-    $timestamp = userdate(time(), get_string('strftimedatetimeaccurate', 'core_langconfig'));
+    $timestamp = userdate(time(), get_string('strftimedatetimeaccurate', 'core_calendar'));
 
     // Build the email subject.
     $subjectparams = new stdClass();

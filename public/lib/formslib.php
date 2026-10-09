@@ -110,7 +110,7 @@ function form_init_date_js() {
             'december'          => date_format_string(strtotime("December 1"), '%B', $defaulttimezone),
         ));
         $PAGE->requires->yui_module($module, $function, $config);
-        $PAGE->requires->string_for_js('strftimemonthyear', 'langconfig');
+        $PAGE->requires->string_for_js('strftimemonthyear', 'calendar');
         $PAGE->requires->string_for_js('loading', 'moodle');
     }
 }

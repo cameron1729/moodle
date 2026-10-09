@@ -68,7 +68,7 @@ final class customfield_test extends \advanced_testcase {
 
         $this->assertEquals('some text', $data->f1);
         $this->assertEquals('Yes', $data->f2);
-        $this->assertEquals(userdate($now, get_string('strftimedaydatetime')), $data->f3);
+        $this->assertEquals(userdate($now, get_string('strftimedaydatetime', 'calendar')), $data->f3);
         $this->assertEquals('b', $data->f4);
         $this->assertEquals('test', $data->f5);
 

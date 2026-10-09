@@ -53,7 +53,7 @@ class quiz_overview_table extends attempts_report_table {
             return;
         }
 
-        $this->strtimeformat = str_replace(',', ' ', get_string('strftimedatetime'));
+        $this->strtimeformat = str_replace(',', ' ', get_string('strftimedatetime', 'calendar'));
         parent::build_table();
 
         // End of adding the data from attempts. Now add averages at bottom.

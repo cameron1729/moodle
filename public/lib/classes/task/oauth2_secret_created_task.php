@@ -39,7 +39,7 @@ class oauth2_secret_created_task extends adhoc_task {
         $a = (object) [
             'name' => s($notice->name),
             'sitename' => format_string($SITE->fullname),
-            'expiry' => userdate($notice->expirytime, get_string('strftimedatetime', 'langconfig')),
+            'expiry' => userdate($notice->expirytime, get_string('strftimedatetime', 'calendar')),
             'url' => $url->out(),
         ];
         if ($creator) {

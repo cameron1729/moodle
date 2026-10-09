@@ -780,7 +780,7 @@ function folder_print_recent_activity($course, $viewfullnames, $timestart) {
 
         $list .= html_writer::start_tag('li');
         $list .= html_writer::start_div('head');
-        $list .= html_writer::div(userdate($file->get_timemodified(), get_string('strftimerecent')), 'date');
+        $list .= html_writer::div(userdate($file->get_timemodified(), get_string('strftimerecent', 'calendar')), 'date');
         $list .= html_writer::div($file->get_author(), 'name');
         $list .= html_writer::end_div(); // Head.
 

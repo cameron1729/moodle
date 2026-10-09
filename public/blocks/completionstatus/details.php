@@ -264,7 +264,7 @@ if (empty($completions)) {
         // Completion data.
         echo html_writer::start_tag('td', array('class' => 'cell c5'));
         if ($row['timecompleted']) {
-            echo userdate($row['timecompleted'], get_string('strftimedatemonthtimeshort', 'langconfig'));
+            echo userdate($row['timecompleted'], get_string('strftimedatemonthtimeshort', 'calendar'));
         } else {
             echo '-';
         }

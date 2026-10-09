@@ -98,7 +98,9 @@ class data_controller extends \core_customfield\data_controller {
             // Compare the date with min/max values, trim the date to the minute or to the day (depending on inludetime setting).
             $includetime = $this->get_field()->get_configdata_property('includetime');
             $machineformat = $includetime ? '%Y-%m-%d %H:%M' : '%Y-%m-%d';
-            $humanformat = $includetime ? get_string('strftimedatetimeshort') : get_string('strftimedatefullshort');
+            $humanformat = $includetime
+                ? get_string('strftimedatetimeshort', 'calendar')
+                : get_string('strftimedatefullshort', 'calendar');
             $value = userdate($data[$elementname], $machineformat, 99, false, false);
             $mindate = $this->get_field()->get_configdata_property('mindate');
             $maxdate = $this->get_field()->get_configdata_property('maxdate');
@@ -137,9 +139,9 @@ class data_controller extends \core_customfield\data_controller {
 
         // Check if time needs to be included.
         if ($this->get_field()->get_configdata_property('includetime')) {
-            $format = get_string('strftimedaydatetime', 'langconfig');
+            $format = get_string('strftimedaydatetime', 'calendar');
         } else {
-            $format = get_string('strftimedate', 'langconfig');
+            $format = get_string('strftimedate', 'calendar');
         }
 
         return userdate($value, $format);

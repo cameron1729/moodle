@@ -233,7 +233,7 @@ function message_format_message($message, $format='', $keywords='', $class='othe
         if ($format) {
             $dateformat = $format;
         } else {
-            $dateformat = get_string('strftimedatetimeshort');
+            $dateformat = get_string('strftimedatetimeshort', 'calendar');
         }
     }
     $time = userdate($message->timecreated, $dateformat);

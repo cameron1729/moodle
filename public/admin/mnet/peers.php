@@ -241,14 +241,14 @@ foreach($hosts as $host) {
     }
 
     if ($host->last_connect_time == 0) {
-        $last_connect = get_string('never');
+        $lastconnect = get_string('never');
     } else {
-        $last_connect = userdate($host->last_connect_time, get_string('strftimedatetime', 'core_langconfig'));
+        $lastconnect = userdate($host->last_connect_time, get_string('strftimedatetime', 'core_calendar'));
     }
     $table->data[] = array(
         html_writer::link($hosturl, $host->name),
         html_writer::link($host->wwwroot, $host->wwwroot),
-        $last_connect,
+        $lastconnect,
         $OUTPUT->single_button(new moodle_url('/admin/mnet/delete.php', array('hostid' => $host->id)), get_string('delete'))
     );
 }

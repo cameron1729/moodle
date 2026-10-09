@@ -403,7 +403,7 @@ class workshop {
      *
      * The returned object contains properties date, datefullshort, datetime, ... containing the given
      * timestamp formatted using strftimedate, strftimedatefullshort, strftimedatetime, ... from the
-     * current lang's langconfig.php
+     * current lang's calendar.php
      * This allows translators and administrators customize the date/time format.
      *
      * @param int $timestamp the timestamp in UTC
@@ -415,7 +415,7 @@ class workshop {
                 'monthyear', 'recent', 'recentfull', 'time');
         $a = new stdclass();
         foreach ($formats as $format) {
-            $a->{$format} = userdate($timestamp, get_string('strftime'.$format, 'langconfig'));
+            $a->{$format} = userdate($timestamp, get_string('strftime' . $format, 'calendar'));
         }
         $day = userdate($timestamp, '%Y%m%d', 99, false);
         $today = userdate(time(), '%Y%m%d', 99, false);

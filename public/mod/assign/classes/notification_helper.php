@@ -632,7 +632,7 @@ class notification_helper {
                     $assignmentobj->get_course()->fullname,
                     options: ['context' => $assignmentobj->get_course_context()],
                 ),
-                'duetime' => userdate($duedate, get_string('strftimetime12', 'langconfig')),
+                'duetime' => userdate($duedate, get_string('strftimetime12', 'calendar')),
                 'url' => $url,
                 'shortlink' => $shortlink,
             ];
@@ -658,7 +658,7 @@ class notification_helper {
 
         $stringparams = [
             'firstname' => $userobject->firstname,
-            'duedate' => userdate(self::get_future_time(self::INTERVAL_DUE_DIGEST), get_string('strftimedaydate', 'langconfig')),
+            'duedate' => userdate(self::get_future_time(self::INTERVAL_DUE_DIGEST), get_string('strftimedaydate', 'calendar')),
             'digest' => $digest,
         ];
 

@@ -684,22 +684,22 @@ final class date_test extends advanced_testcase {
             ],
             'string_strftimedatetime' => [
                 "1708405742",
-                get_string("strftimedatetime", 'langconfig'),
+                get_string("strftimedatetime", 'calendar'),
                 "20 February 2024, 01:09 PM",
             ],
             'numeric_strftimedatetime' => [
                 1708405742,
-                get_string("strftimedatetime", 'langconfig'),
+                get_string("strftimedatetime", 'calendar'),
                 "20 February 2024, 01:09 PM",
             ],
             'string_strftimedatetimeshortaccurate' => [
                 "1708405742",
-                get_string("strftimedatetimeshortaccurate", 'langconfig'),
+                get_string("strftimedatetimeshortaccurate", 'calendar'),
                 "20/02/24, 13:09:02",
             ],
             'numeric_strftimedatetimeshortaccurate' => [
                 1708405742,
-                get_string("strftimedatetimeshortaccurate", 'langconfig'),
+                get_string("strftimedatetimeshortaccurate", 'calendar'),
                 "20/02/24, 13:09:02",
             ],
         ];

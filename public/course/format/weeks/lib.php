@@ -102,7 +102,7 @@ class format_weeks extends core_courseformat\base {
             $enddate->modify('-1 day');
             $dates->end = $enddate->getTimestamp();
 
-            $dateformat = get_string('strftimedateshort');
+            $dateformat = get_string('strftimedateshort', 'calendar');
             $weekday = userdate($dates->start, $dateformat);
             $endweekday = userdate($dates->end, $dateformat);
             return $weekday.' - '.$endweekday;

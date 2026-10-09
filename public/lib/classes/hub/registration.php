@@ -816,7 +816,7 @@ class registration {
                 'message' => get_string(
                     'pleaserefreshregistration',
                     'admin',
-                    userdate($lastupdated, get_string('strftimedate', 'langconfig')),
+                    userdate($lastupdated, get_string('strftimedate', 'calendar')),
                 ),
                 'type' => notification::NOTIFY_INFO,
             ];

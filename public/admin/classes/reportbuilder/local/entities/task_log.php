@@ -137,7 +137,7 @@ class task_log extends base {
         ))
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_field("{$tablealias}.timestart")
-            ->add_callback([format::class, 'userdate'], get_string('strftimedatetimeshortaccurate', 'core_langconfig'));
+            ->add_callback([format::class, 'userdate'], get_string('strftimedatetimeshortaccurate', 'core_calendar'));
 
         // End time column.
         $columns[] = (new column(
@@ -147,7 +147,7 @@ class task_log extends base {
         ))
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_field("{$tablealias}.timeend")
-            ->add_callback([format::class, 'userdate'], get_string('strftimedatetimeshortaccurate', 'core_langconfig'));
+            ->add_callback([format::class, 'userdate'], get_string('strftimedatetimeshortaccurate', 'core_calendar'));
 
         // Duration column.
         $columns[] = (new column(

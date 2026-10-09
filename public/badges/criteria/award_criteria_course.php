@@ -110,7 +110,11 @@ class award_criteria_course extends award_criteria {
             $options = array('context' => context_course::instance($course->id));
             $str = html_writer::tag('b', '"' . format_string($course->fullname, true, $options) . '"');
             if (isset($param['bydate'])) {
-                $str .= get_string('criteria_descr_bydate', 'badges', userdate($param['bydate'], get_string('strftimedate', 'core_langconfig')));
+                $str .= get_string(
+                    'criteria_descr_bydate',
+                    'badges',
+                    userdate($param['bydate'], get_string('strftimedate', 'core_calendar')),
+                );
             }
             if (isset($param['grade'])) {
                 $str .= get_string('criteria_descr_grade', 'badges', $param['grade']);

@@ -88,7 +88,7 @@ final class humandate_exporter_test extends \advanced_testcase {
 
         $expected = [
             'timestamp' => $timestamp,
-            'userdate' => userdate($timestamp, get_string($userdateformat)),
+            'userdate' => userdate($timestamp, get_string($userdateformat, 'calendar')),
             'time' => $formatmethod->invoke($humandate),
             'needtitle' => $needtitle,
             'link' => '',

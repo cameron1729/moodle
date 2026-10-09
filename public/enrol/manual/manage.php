@@ -107,7 +107,7 @@ if (empty($extendbase)) {
 // Build the list of options for the starting from dropdown.
 $now = time();
 $today = make_timestamp(date('Y', $now), date('m', $now), date('d', $now), 0, 0, 0);
-$dateformat = get_string('strftimedatefullshort');
+$dateformat = get_string('strftimedatefullshort', 'calendar');
 
 // Enrolment start.
 $basemenu = array();
@@ -115,7 +115,7 @@ if ($course->startdate > 0) {
     $basemenu[2] = get_string('coursestart') . ' (' . userdate($course->startdate, $dateformat) . ')';
 }
 $basemenu[3] = get_string('today') . ' (' . userdate($today, $dateformat) . ')';
-$basemenu[4] = get_string('now', 'enrol_manual') . ' (' . userdate($now, get_string('strftimedatetimeshort')) . ')';
+$basemenu[4] = get_string('now', 'enrol_manual') . ' (' . userdate($now, get_string('strftimedatetimeshort', 'calendar')) . ')';
 
 // Process add and removes.
 if ($canenrol && optional_param('add', false, PARAM_BOOL) && confirm_sesskey()) {

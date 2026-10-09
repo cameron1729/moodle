@@ -90,10 +90,10 @@
             >
                 {{#lastmessagedate}}
                     {{#istoday}}
-                        {{#userdate}} {{.}}, {{#str}} strftimetime24, core_langconfig  {{/str}} {{/userdate}}
+                        {{#userdate}} {{.}}, {{#str}} strftimetime24, core_calendar  {{/str}} {{/userdate}}
                     {{/istoday}}
                     {{^istoday}}
-                        {{#userdate}} {{.}}, {{#str}} strftimedatefullshort, core_langconfig  {{/str}} {{/userdate}}
+                        {{#userdate}} {{.}}, {{#str}} strftimedatefullshort, core_calendar  {{/str}} {{/userdate}}
                     {{/istoday}}
 
                 {{/lastmessagedate}}

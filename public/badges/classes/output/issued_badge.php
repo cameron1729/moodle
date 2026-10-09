@@ -142,7 +142,7 @@ class issued_badge implements renderable {
         if (isset($this->issued['expires'])) {
             if ($expiration < $now) {
                 $data->expireddate = $this->issued['expires'];
-                $data->expireddateformatted = userdate($this->issued['expires'], get_string('strftimedatetime', 'langconfig'));
+                $data->expireddateformatted = userdate($this->issued['expires'], get_string('strftimedatetime', 'calendar'));
             } else {
                 $data->expiredate = $this->issued['expires'];
             }

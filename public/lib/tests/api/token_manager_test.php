@@ -386,7 +386,7 @@ final class token_manager_test extends \advanced_testcase {
 
         $formatted = token_manager::format_datetime($timestamp);
 
-        $this->assertSame(userdate($timestamp, get_string('strftimedatetime', 'langconfig')), $formatted);
+        $this->assertSame(userdate($timestamp, get_string('strftimedatetime', 'calendar')), $formatted);
         // The weekday is what userdate() adds by default, and what this must not carry.
         $this->assertStringNotContainsString(userdate($timestamp, '%A'), $formatted);
         $this->assertNotSame(userdate($timestamp), $formatted);

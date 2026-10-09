@@ -570,7 +570,7 @@ class template {
     protected function get_tag_timeadded_replacement(stdClass $entry, bool $canmanageentry): string {
         return html_writer::tag(
             'span',
-            userdate($entry->timecreated, get_string('strftimedatemonthabbr', 'langconfig')),
+            userdate($entry->timecreated, get_string('strftimedatemonthabbr', 'calendar')),
             ['title' => userdate($entry->timecreated)]
         );
     }
@@ -585,7 +585,7 @@ class template {
     protected function get_tag_timemodified_replacement(stdClass $entry, bool $canmanageentry): string {
         return html_writer::tag(
             'span',
-            userdate($entry->timemodified, get_string('strftimedatemonthabbr', 'langconfig')),
+            userdate($entry->timemodified, get_string('strftimedatemonthabbr', 'calendar')),
             ['title' => userdate($entry->timemodified)]
         );
     }

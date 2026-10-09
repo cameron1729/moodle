@@ -116,7 +116,7 @@ final class personal_access_token_expiry_task_test extends \advanced_testcase {
         $this->clock->set_to(self::NOW + WEEKSECS - DAYSECS);
         $message = current($this->run_task());
 
-        $format = get_string('strftimedatetime', 'langconfig');
+        $format = get_string('strftimedatetime', 'calendar');
         $this->assertStringContainsString(userdate(self::NOW + WEEKSECS, $format, 'Pacific/Auckland'), $message->fullmessagehtml);
         $this->assertStringNotContainsString(userdate(self::NOW + WEEKSECS, $format, 'Europe/London'), $message->fullmessagehtml);
     }

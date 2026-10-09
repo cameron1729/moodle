@@ -392,11 +392,17 @@ function resource_get_optional_details($resource, $cm, bool $showtype = true) {
         }
         if (!empty($options['showdate']) && (!empty($filedetails['modifieddate']) || !empty($filedetails['uploadeddate']))) {
             if (!empty($filedetails['modifieddate'])) {
-                $date = get_string('modifieddate', 'mod_resource', userdate($filedetails['modifieddate'],
-                    get_string('strftimedatetimeshort', 'langconfig')));
+                $date = get_string(
+                    'modifieddate',
+                    'mod_resource',
+                    userdate($filedetails['modifieddate'], get_string('strftimedatetimeshort', 'calendar')),
+                );
             } else if (!empty($filedetails['uploadeddate'])) {
-                $date = get_string('uploadeddate', 'mod_resource', userdate($filedetails['uploadeddate'],
-                    get_string('strftimedatetimeshort', 'langconfig')));
+                $date = get_string(
+                    'uploadeddate',
+                    'mod_resource',
+                    userdate($filedetails['uploadeddate'], get_string('strftimedatetimeshort', 'calendar')),
+                );
             }
             $langstring .= 'date';
             $infodisplayed += 1;

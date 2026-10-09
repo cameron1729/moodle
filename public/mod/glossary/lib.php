@@ -594,7 +594,7 @@ function glossary_print_recent_activity($course, $viewfullnames, $timestart) {
     }
 
     echo $OUTPUT->heading(get_string('newentries', 'glossary') . ':', 6);
-    $strftimerecent = get_string('strftimerecent');
+    $strftimerecent = get_string('strftimerecent', 'calendar');
     $entrycount = 0;
     foreach ($entries as $entry) {
         if ($entrycount < GLOSSARY_RECENT_ACTIVITY_LIMIT) {
