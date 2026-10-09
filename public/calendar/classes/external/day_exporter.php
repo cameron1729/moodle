@@ -265,7 +265,7 @@ class day_exporter extends exporter {
     protected function get_view_link_title() {
         $title = null;
 
-        $userdate = userdate($this->data[0], get_string('strftimedayshort'));
+        $userdate = userdate($this->data[0], get_string('strftimedayshort', 'calendar'));
         if ($this->data['istoday']) {
             $title = get_string('todayplustitle', 'calendar', $userdate);
         } else if (count($this->related['events'])) {

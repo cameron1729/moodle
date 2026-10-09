@@ -141,9 +141,9 @@ class email_digest implements \renderable, \templatable {
                 // Check if the message was sent today.
                 $istoday = userdate($message->timecreated, 'Y-m-d') == userdate(time(), 'Y-m-d');
                 if ($istoday) {
-                    $timesent = userdate($message->timecreated, get_string('strftimetime24', 'langconfig'));
+                    $timesent = userdate($message->timecreated, get_string('strftimetime24', 'calendar'));
                 } else {
-                    $timesent = userdate($message->timecreated, get_string('strftimedatefullshort', 'langconfig'));
+                    $timesent = userdate($message->timecreated, get_string('strftimedatefullshort', 'calendar'));
                 }
 
                 $messageformatted->timesent = $timesent;

@@ -699,7 +699,7 @@ class user extends grade_report {
                             'grades',
                             userdate(
                                 $gradegrade->get_datesubmitted(),
-                                get_string('strftimedatetimeshort')
+                                get_string('strftimedatetimeshort', 'calendar')
                             ) . $gradestatus
                         );
                         $gradeitemdata['gradehiddenbydate'] = true;

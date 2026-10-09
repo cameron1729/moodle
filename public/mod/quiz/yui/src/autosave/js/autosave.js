@@ -429,7 +429,7 @@ M.mod_quiz.autosave = {
         require(['core/user_date', 'core/notification'], function(UserDate, Notification) {
             UserDate.get([{
                 timestamp: Math.floor(Date.now() / 1000),
-                format: M.util.get_string('strftimedatetimeshortaccurate', 'langconfig'),
+                format: M.util.get_string('strftimedatetimeshortaccurate', 'calendar'),
             }]).then(function(dateStrs) {
                 var infoDiv = Y.one('#mod_quiz_navblock .othernav .autosave_info');
                 infoDiv.set('text', M.util.get_string('lastautosave', 'quiz', dateStrs[0]));

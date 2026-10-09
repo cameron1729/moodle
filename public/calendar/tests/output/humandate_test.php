@@ -72,7 +72,7 @@ final class humandate_test extends \advanced_testcase {
         $expected = [
             'timestamp' => $timestamp,
             'date' => $date,
-            'userdate' => userdate($timestamp, get_string($userdateformat)),
+            'userdate' => userdate($timestamp, get_string($userdateformat, 'calendar')),
             'ispast' => $ispast,
             'needtitle' => $needtitle,
             'isnear' => $isnear,

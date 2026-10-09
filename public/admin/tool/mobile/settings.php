@@ -169,7 +169,7 @@ if ($hassiteconfig || has_capability('moodle/site:configview', context_system::i
             // Add cache reload option if the information is older than 10 days.
             $reloadcachetext = new lang_string('planneverchecked', 'tool_mobile');
             if ($lastupdated) {
-                $lastupdatedstr = userdate($lastupdated, get_string('strftimedatemonthabbr', 'langconfig'));
+                $lastupdatedstr = userdate($lastupdated, get_string('strftimedatemonthabbr', 'calendar'));
                 $reloadcachetext = new lang_string('planlastchecked', 'tool_mobile', $lastupdatedstr);
             }
             $templateheadersettings['reloadcache'] = [

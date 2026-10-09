@@ -50,7 +50,7 @@ class tab2 extends base {
     public function export_for_template(renderer_base $output) {
         $content = (object)[];
         // Define any content you might want to pass to the dynamic tab.
-        $content->currenttime = userdate(time(), get_string('strftimedatetimeaccurate'));
+        $content->currenttime = userdate(time(), get_string('strftimedatetimeaccurate', 'calendar'));
 
         return $content;
     }

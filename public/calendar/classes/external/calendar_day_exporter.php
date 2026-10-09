@@ -195,7 +195,7 @@ class calendar_day_exporter extends exporter {
 
         $days = calendar_get_days();
         $return['date'] = (new date_exporter($date))->export($output);
-        $return['periodname'] = userdate($this->calendar->time, get_string('strftimedaydate'));
+        $return['periodname'] = userdate($this->calendar->time, get_string('strftimedaydate', 'calendar'));
         $return['previousperiod'] = (new date_exporter($previousperiod))->export($output);
         $return['previousperiodname'] = $days[$previousperiod['wday']]['fullname'];
         $return['previousperiodlink'] = $previousperiodlink->out(false);

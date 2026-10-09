@@ -1729,7 +1729,7 @@ function lti_get_tool_table($tools, $id) {
         ";
 
         foreach ($tools as $type) {
-            $date = userdate($type->timecreated, get_string('strftimedatefullshort', 'core_langconfig'));
+            $date = userdate($type->timecreated, get_string('strftimedatefullshort', 'core_calendar'));
             $accept = get_string('accept', 'lti');
             $update = get_string('update', 'lti');
             $delete = get_string('delete', 'lti');
@@ -1837,7 +1837,7 @@ function lti_get_tool_proxy_table($toolproxies, $id) {
                 </thead>
 EOD;
         foreach ($toolproxies as $toolproxy) {
-            $date = userdate($toolproxy->timecreated, get_string('strftimedatefullshort', 'core_langconfig'));
+            $date = userdate($toolproxy->timecreated, get_string('strftimedatefullshort', 'core_calendar'));
             $accept = get_string('register', 'lti');
             $update = get_string('update', 'lti');
             $delete = get_string('delete', 'lti');

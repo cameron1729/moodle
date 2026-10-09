@@ -1846,7 +1846,7 @@ function format_time($totalsecs, $str = null) {
  * @category time
  * @param int $date the timestamp in UTC, as obtained from the database.
  * @param string $format strftime format. You should probably get this using
- *        get_string('strftime...', 'langconfig');
+ *        get_string('strftime...', 'calendar');
  * @param int|float|string $timezone by default, uses the user's time zone. if numeric and
  *        not 99 then daylight saving will not be added.
  *        {@link https://moodledev.io/docs/apis/subsystems/time#timezone}
@@ -1868,7 +1868,7 @@ function userdate($date, $format = '', $timezone = 99, $fixday = true, $fixhour 
  * @category time
  * @param int $date the timestamp in UTC, as obtained from the database.
  * @param string $format strftime format. You should probably get this using
- *        get_string('strftime...', 'langconfig');
+ *        get_string('strftime...', 'calendar');
  * @param int|float|string $timezone by default, uses the user's time zone. if numeric and
  *        not 99 then daylight saving will not be added.
  *        {@link https://moodledev.io/docs/apis/subsystems/time#timezone}
@@ -1911,8 +1911,8 @@ function date_format_string($date, $format, $tz = 99) {
             '%P',
             '%p',
         ], [
-            $datearray['hours'] < 12 ? get_string('am', 'langconfig') : get_string('pm', 'langconfig'),
-            $datearray['hours'] < 12 ? get_string('amcaps', 'langconfig') : get_string('pmcaps', 'langconfig'),
+            $datearray['hours'] < 12 ? get_string('am', 'calendar') : get_string('pm', 'calendar'),
+            $datearray['hours'] < 12 ? get_string('amcaps', 'calendar') : get_string('pmcaps', 'calendar'),
         ], $format);
     }
 
@@ -2022,7 +2022,7 @@ function get_time_interval_string(int $time1, int $time2, string $format = '',
         if ($fullformat) {
             $formatkey .= 'full';
         }
-        $format = get_string($formatkey, 'langconfig');
+        $format = get_string($formatkey, 'calendar');
     }
     return $interval->format($format);
 }

@@ -98,7 +98,7 @@ class model_logs extends \table_sql {
      * @return string HTML for the version column
      */
     public function col_version($log) {
-        $recenttimestr = get_string('strftimerecent', 'core_langconfig');
+        $recenttimestr = get_string('strftimerecent', 'core_calendar');
         return userdate($log->version, $recenttimestr);
     }
 
@@ -118,7 +118,7 @@ class model_logs extends \table_sql {
      * @return string HTML for the time column
      */
     public function col_time($log) {
-        $recenttimestr = get_string('strftimerecent', 'core_langconfig');
+        $recenttimestr = get_string('strftimerecent', 'core_calendar');
         return userdate($log->timecreated, $recenttimestr);
     }
 

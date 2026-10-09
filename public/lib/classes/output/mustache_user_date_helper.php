@@ -31,7 +31,7 @@ class mustache_user_date_helper {
      *
      * {{#userdate}}1487655635, %Y %m %d{{/userdate}}
      *
-     * There is a list of formats in lang/en/langconfig.php that can be used as the date format.
+     * There is a list of formats in lang/en/calendar.php that can be used as the date format.
      *
      * Both args are required. The timestamp must come first.
      *

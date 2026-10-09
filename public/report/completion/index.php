@@ -58,7 +58,7 @@ $download = ($dataformat !== '');
 if ($download) {
     $dateformat = "%F %T";
 } else {
-    $dateformat = get_string('strftimedatetimeshort', 'langconfig');
+    $dateformat = get_string('strftimedatetimeshort', 'calendar');
 }
 
 // Paging

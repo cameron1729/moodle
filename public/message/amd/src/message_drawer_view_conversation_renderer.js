@@ -927,7 +927,7 @@ function(
             // If we have timestamps then pre-load the formatted version of each of them
             // in a single request to the server. This saves the templates doing multiple
             // individual requests.
-            datesCachePromise = Str.get_string('strftimetime24', 'core_langconfig')
+            datesCachePromise = Str.get_string('strftimetime24', 'core_calendar')
                 .then(function(format) {
                     var requests = timestampsToFormat.map(function(timestamp) {
                         return {

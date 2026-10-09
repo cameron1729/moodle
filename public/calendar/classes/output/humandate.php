@@ -267,9 +267,9 @@ class humandate implements externable, renderable, templatable {
     private function default_userdate(): string {
         $timestamp = $this->datetime->getTimestamp();
         if ($this->is_current_year()) {
-            $format = get_string('strftimedayshort', 'langconfig');
+            $format = get_string('strftimedayshort', 'calendar');
         } else {
-            $format = get_string('strftimedaydate', 'langconfig');
+            $format = get_string('strftimedaydate', 'calendar');
         }
         return userdate($timestamp, $format);
     }
@@ -326,19 +326,19 @@ class humandate implements externable, renderable, templatable {
             $format = get_string(
                 'timerelativetoday',
                 'calendar',
-                get_string('strftimedateshort', 'langconfig')
+                get_string('strftimedateshort', 'calendar')
             );
         } else if ($usertimestamp == $this->get_user_date(strtotime('yesterday', $this->clock->now()->getTimestamp()))) {
             $format = get_string(
                 'timerelativeyesterday',
                 'calendar',
-                get_string('strftimedateshort', 'langconfig')
+                get_string('strftimedateshort', 'calendar')
             );
         } else if ($usertimestamp == $this->get_user_date(strtotime('tomorrow', $this->clock->now()->getTimestamp()))) {
             $format = get_string(
                 'timerelativetomorrow',
                 'calendar',
-                get_string('strftimedateshort', 'langconfig')
+                get_string('strftimedateshort', 'calendar')
             );
         } else {
             return null;
@@ -386,9 +386,9 @@ class humandate implements externable, renderable, templatable {
 
         // Allow language customization of selected time format.
         if ($timeformat === CALENDAR_TF_12) {
-            $timeformat = get_string('strftimetime12', 'langconfig');
+            $timeformat = get_string('strftimetime12', 'calendar');
         } else if ($timeformat === CALENDAR_TF_24) {
-            $timeformat = get_string('strftimetime24', 'langconfig');
+            $timeformat = get_string('strftimetime24', 'calendar');
         }
 
         if ($timeformat) {
@@ -397,7 +397,7 @@ class humandate implements externable, renderable, templatable {
 
         // Let's use default format.
         if ($this->langtimeformat === null) {
-            $langtimeformat = get_string('strftimetime');
+            $langtimeformat = get_string('strftimetime', 'calendar');
         }
 
         return userdate($this->datetime->getTimestamp(), $langtimeformat);

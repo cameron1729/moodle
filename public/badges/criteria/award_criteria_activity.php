@@ -93,7 +93,11 @@ class award_criteria_activity extends award_criteria {
             } else {
                 $str = html_writer::tag('b', '"' . get_string('modulename', $mod->modname) . ' - ' . $mod->name . '"');
                 if (isset($p['bydate'])) {
-                    $str .= get_string('criteria_descr_bydate', 'badges', userdate($p['bydate'], get_string('strftimedate', 'core_langconfig')));
+                    $str .= get_string(
+                        'criteria_descr_bydate',
+                        'badges',
+                        userdate($p['bydate'], get_string('strftimedate', 'core_calendar')),
+                    );
                 }
             }
             $output[] = $str;

@@ -1,0 +1,12 @@
+issueNumber: MDL-79461
+notes:
+  core:
+    - message: >-
+        The `dateinterval*` and `strftime*` language strings, together with
+        `am`, `amcaps`, `pm` and `pmcaps`, in `core_langconfig` are deprecated.
+        Use the same identifiers from `core_calendar` instead.
+
+        Site-specific language customisations of these strings must be
+        reapplied in `core_calendar`. Existing translations in the official
+        language packs are copied through AMOS.
+      type: deprecated

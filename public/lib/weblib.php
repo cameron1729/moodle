@@ -1977,7 +1977,7 @@ function print_recent_activity_note($time, $user, $text, $link, $return=false, $
     }
 
     if (is_null($strftimerecent)) {
-        $strftimerecent = get_string('strftimerecent');
+        $strftimerecent = get_string('strftimerecent', 'calendar');
     }
 
     $output .= '<div class="head">';

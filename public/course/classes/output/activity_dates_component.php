@@ -58,7 +58,7 @@ class activity_dates_component implements react_component_renderable, renderable
         $dates = [];
         foreach ($this->activitydates as $date) {
             if (empty($date['relativeto'])) {
-                $value = userdate($date['timestamp'], get_string('strftimedaydatetime', 'core_langconfig'));
+                $value = userdate($date['timestamp'], get_string('strftimedaydatetime', 'core_calendar'));
             } else {
                 $diffstr = get_time_interval_string($date['timestamp'], $date['relativeto']);
                 $identifier = $date['timestamp'] >= $date['relativeto']

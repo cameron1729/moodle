@@ -295,8 +295,8 @@ class core_string_manager_standard implements core_string_manager {
         global $CFG;
 
         $this->countgetstring++;
-        // There are very many uses of these time formatting strings without the 'langconfig' component,
-        // it would not be reasonable to expect that all of them would be converted during 2.0 migration.
+        // Preserve the legacy lookup for formats moved from core to langconfig in Moodle 2.0.
+        // These langconfig strings are now deprecated; new code must use the calendar component explicitly.
         static $langconfigstrs = array(
             'strftimedate' => 1,
             'strftimedatefullshort' => 1,

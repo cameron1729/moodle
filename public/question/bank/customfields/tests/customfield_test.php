@@ -187,13 +187,13 @@ final class customfield_test extends \advanced_testcase {
 
         $this->assertEquals('some text', $q1cfdata->f1);
         $this->assertEquals('Yes', $q1cfdata->f2);
-        $this->assertEquals(userdate($this->testnow, get_string('strftimedaydatetime')), $q1cfdata->f3);
+        $this->assertEquals(userdate($this->testnow, get_string('strftimedaydatetime', 'calendar')), $q1cfdata->f3);
         $this->assertEquals('b', $q1cfdata->f4);
         $this->assertEquals('test', $q1cfdata->f5);
 
         $this->assertEquals('some more text', $q2cfdata->f1);
         $this->assertEquals('No', $q2cfdata->f2);
-        $this->assertEquals(userdate($this->testnow, get_string('strftimedaydatetime')), $q2cfdata->f3);
+        $this->assertEquals(userdate($this->testnow, get_string('strftimedaydatetime', 'calendar')), $q2cfdata->f3);
         $this->assertEquals('a', $q2cfdata->f4);
         $this->assertEquals('test text', $q2cfdata->f5);
     }
@@ -299,7 +299,7 @@ final class customfield_test extends \advanced_testcase {
         $newquestion1cfdata = $customfieldhandler->export_instance_data_object($newquestion1->id);
         $this->assertEquals('some text', $newquestion1cfdata->f1);
         $this->assertEquals('Yes', $newquestion1cfdata->f2);
-        $this->assertEquals(userdate($this->testnow, get_string('strftimedaydatetime')), $newquestion1cfdata->f3);
+        $this->assertEquals(userdate($this->testnow, get_string('strftimedaydatetime', 'calendar')), $newquestion1cfdata->f3);
         $this->assertEquals('b', $newquestion1cfdata->f4);
         $this->assertEquals('test', $newquestion1cfdata->f5);
 
@@ -307,7 +307,7 @@ final class customfield_test extends \advanced_testcase {
         $newquestion2cfdata = $customfieldhandler->export_instance_data_object($newquestion2->id);
         $this->assertEquals('some more text', $newquestion2cfdata->f1);
         $this->assertEquals('No', $newquestion2cfdata->f2);
-        $this->assertEquals(userdate($this->testnow, get_string('strftimedaydatetime')), $newquestion2cfdata->f3);
+        $this->assertEquals(userdate($this->testnow, get_string('strftimedaydatetime', 'calendar')), $newquestion2cfdata->f3);
         $this->assertEquals('a', $newquestion2cfdata->f4);
         $this->assertEquals('test text', $newquestion2cfdata->f5);
     }

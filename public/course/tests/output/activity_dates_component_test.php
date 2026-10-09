@@ -40,7 +40,7 @@ final class activity_dates_component_test extends \advanced_testcase {
         $this->assertTrue($component->has_dates());
         $this->assertEquals(
             [
-                ['label' => 'Opens:', 'value' => userdate(1700000000, get_string('strftimedaydatetime', 'core_langconfig'))],
+                ['label' => 'Opens:', 'value' => userdate(1700000000, get_string('strftimedaydatetime', 'core_calendar'))],
                 ['label' => 'Due:', 'value' => '1d 0h 0m after course start'],
                 ['label' => 'Closes:', 'value' => '0d 1h 0m before course start'],
             ],

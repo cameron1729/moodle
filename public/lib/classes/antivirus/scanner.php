@@ -216,7 +216,7 @@ abstract class scanner {
         $content->ipaddress = getremoteaddr();
         $geoinfo = iplookup_find_location(getremoteaddr());
         $content->geoinfo = $geoinfo['city'] . ', ' . $geoinfo['country'];
-        $content->date = userdate(time(), get_string('strftimedatetimeshort'));
+        $content->date = userdate(time(), get_string('strftimedatetimeshort', 'calendar'));
         $content->referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : $unknown;
         $content->notice = $notice;
         $report = new \moodle_url('/report/infectedfiles/index.php');

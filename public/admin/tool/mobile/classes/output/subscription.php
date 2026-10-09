@@ -89,7 +89,7 @@ class subscription implements \renderable, \templatable {
             } else {
                 $diff = time() - $lastupdate;
                 $oldcachetime['since'] = (int) floor($diff / DAYSECS);
-                $oldcachetime['date'] = userdate($lastupdate, get_string('strftimedatetime', 'langconfig'));
+                $oldcachetime['date'] = userdate($lastupdate, get_string('strftimedatetime', 'calendar'));
                 $data['messageoldcache'] = get_string('showingcacheddata', 'tool_mobile', $oldcachetime);
             }
         }
@@ -171,7 +171,7 @@ class subscription implements \renderable, \templatable {
         if (!empty($data['subscription']['expiretime'])) {
             $expiretimeshort = userdate(
                 (int)$data['subscription']['expiretime'],
-                get_string('strftimedatetimeshort', 'langconfig'),
+                get_string('strftimedatetimeshort', 'calendar'),
             );
             $data['subscription']['planexpiresontext'] = get_string('planexpireson', 'tool_mobile', $expiretimeshort);
         }
@@ -220,7 +220,7 @@ class subscription implements \renderable, \templatable {
                             'extrabuttonclasses' => 'bg-danger text-light',
                         ];
                     }
-                    $monthformat = get_string('strftimemonth');
+                    $monthformat = get_string('strftimemonth', 'calendar');
                     foreach ($data['notifications']['monthly'] as $key => $month) {
                         if (!empty($month['year']) && !empty($month['month'])) {
                             $timestamp = make_timestamp((int)$month['year'], (int)$month['month'], 1);

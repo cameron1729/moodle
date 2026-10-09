@@ -72,7 +72,7 @@ class recalculate extends \core\task\adhoc_task {
 
     public function execute(): void {
         global $DB;
-        $dateformat = get_string('strftimedatetimeshortaccurate', 'core_langconfig');
+        $dateformat = get_string('strftimedatetimeshortaccurate', 'core_calendar');
         $data = $this->get_custom_data();
         $quiz = $DB->get_record('quiz', ['id' => $data->quizid]);
         if (!$quiz) {

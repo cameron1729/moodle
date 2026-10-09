@@ -76,7 +76,7 @@ class enrol_manual_enrol_users_form extends moodleform {
         // Build the list of options for the starting from dropdown.
         $now = time();
         $today = make_timestamp(date('Y', $now), date('m', $now), date('d', $now), 0, 0, 0);
-        $dateformat = get_string('strftimedatefullshort');
+        $dateformat = get_string('strftimedatefullshort', 'calendar');
 
         // Enrolment start.
         $basemenu = array();
@@ -84,7 +84,8 @@ class enrol_manual_enrol_users_form extends moodleform {
             $basemenu[2] = get_string('coursestart') . ' (' . userdate($course->startdate, $dateformat) . ')';
         }
         $basemenu[3] = get_string('today') . ' (' . userdate($today, $dateformat) . ')';
-        $basemenu[4] = get_string('now', 'enrol_manual') . ' (' . userdate($now, get_string('strftimedatetimeshort')) . ')';
+        $basemenu[4] = get_string('now', 'enrol_manual') . ' (' .
+            userdate($now, get_string('strftimedatetimeshort', 'calendar')) . ')';
         $basemenu[5] = get_string('choosedots');
 
         // User selection.

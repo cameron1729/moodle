@@ -236,12 +236,12 @@ class renderer extends \plugin_renderer_base {
                 }
 
                 $timecreated  = $userfactor->timecreated == '-' ? '-'
-                    : userdate($userfactor->timecreated,  get_string('strftimedatetime'));
+                    : userdate($userfactor->timecreated, get_string('strftimedatetime', 'calendar'));
                 $lastverified = $userfactor->lastverified;
                 if ($lastverified == 0) {
                     $lastverified = '-';
                 } else if ($lastverified != '-') {
-                    $lastverified = userdate($userfactor->lastverified, get_string('strftimedatetime'));
+                    $lastverified = userdate($userfactor->lastverified, get_string('strftimedatetime', 'calendar'));
                     $lastverified .= '<br>';
                     $lastverified .= get_string('ago', 'core_message', format_time(time() - $userfactor->lastverified));
                 }
@@ -564,7 +564,7 @@ class renderer extends \plugin_renderer_base {
                 $proflink,
                 $creatediplink,
                 $lastiplink,
-                userdate($record->timemodified, get_string('strftimedatetime', 'langconfig')),
+                userdate($record->timemodified, get_string('strftimedatetime', 'calendar')),
                 $actions,
             ];
         }
