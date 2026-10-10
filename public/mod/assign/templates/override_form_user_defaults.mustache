@@ -18,23 +18,30 @@
     @template mod_assign/override_form_user_defaults
 
     HTML for showing user default dates in override form.
+
+    Example context (json):
+    {
+        "allowsubmissionsfromdate": 1589792272,
+        "duedate": 1590397072,
+        "cutoffdate": 0
+    }
 }}
 <dl>
     <dt>{{#str}} allowsubmissionsfromdate, mod_assign {{/str}}</dt>
-    <dl>
+    <dd>
         {{#allowsubmissionsfromdate}} {{#userdate}} {{.}}, {{#str}} strftimedatetime, core_calendar {{/str}} {{/userdate}} {{/allowsubmissionsfromdate}}
         {{^allowsubmissionsfromdate}} {{#str}} disabled, mod_assign {{/str}} {{/allowsubmissionsfromdate}}
-    </dl>
+    </dd>
 
     <dt>{{#str}} duedate, mod_assign {{/str}}</dt>
-    <dl>
+    <dd>
         {{#duedate}} {{#userdate}} {{.}}, {{#str}} strftimedatetime, core_calendar {{/str}} {{/userdate}} {{/duedate}}
         {{^duedate}} {{#str}} disabled, mod_assign {{/str}} {{/duedate}}
-    </dl>
+    </dd>
 
     <dt>{{#str}} cutoffdate, mod_assign {{/str}}</dt>
-    <dl>
+    <dd>
         {{#cutoffdate}} {{#userdate}} {{cutoffdate}}, {{#str}} strftimedatetime, core_calendar {{/str}} {{/userdate}} {{/cutoffdate}}
         {{^cutoffdate}} {{#str}} disabled, mod_assign {{/str}} {{/cutoffdate}}
-    </dl>
+    </dd>
 </dl>
