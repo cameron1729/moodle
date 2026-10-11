@@ -27,6 +27,7 @@
     * none
 
     Context variables required for this template:
+    * language
     * righttoleft
     * navigation
     * systemname
@@ -35,6 +36,7 @@
 
     Example context (json):
     {
+        "language": "en",
         "righttoleft": 0,
         "navigation": "Navigation html",
         "systemname": "Test System",
@@ -45,7 +47,7 @@
 }}
 
 <!DOCTYPE html>
-<html {{#righttoleft}}dir="rtl"{{/righttoleft}}>
+<html lang="{{language}}"{{#righttoleft}} dir="rtl"{{/righttoleft}}>
 <head>
     <meta charset="UTF-8">
     <title>Data export</title>
