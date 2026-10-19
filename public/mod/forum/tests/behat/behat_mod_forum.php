@@ -52,6 +52,13 @@ class behat_mod_forum extends behat_base {
                     "//*[self::a or self::span][@aria-label=%locator% or @data-type=%locator%]",
                 ]
             ),
+            new behat_component_named_selector(
+                'Post',
+                [
+                    ".//*[@data-region-content='forum-post-core-subject'][normalize-space(.) = %locator%]" .
+                    "/ancestor::article[1]",
+                ]
+            ),
         ];
     }
 
