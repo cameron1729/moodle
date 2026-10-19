@@ -39,6 +39,23 @@ use Behat\Gherkin\Node\TableNode;
  */
 class behat_mod_forum extends behat_base {
     /**
+     * Return the list of exact named selectors.
+     *
+     * @return behat_component_named_selector[]
+     */
+    public static function get_exact_named_selectors(): array {
+        return [
+            new behat_component_named_selector(
+                'Post',
+                [
+                    ".//*[@data-region-content='forum-post-core-subject'][normalize-space(.) = %locator%]" .
+                    "/ancestor::article[1]",
+                ]
+            ),
+        ];
+    }
+
+    /**
      * Reset forum caches between tests.
      *
      * @BeforeScenario @mod_forum
