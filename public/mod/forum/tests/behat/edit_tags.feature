@@ -33,7 +33,7 @@ Feature: Edited forum posts handle tags correctly
       | Message | Student post message |
       | Tags    | Tag1                 |
     Then I should see "Tag1" in the ".tag_list" "css_element"
-    And I click on "Edit" "link" in the "//div[@aria-label='Student post subject by Student 1']" "xpath_element"
+    And I click on "Edit" "link" in the "Student post subject" "mod_forum > Post"
     Then I should see "Tag1" in the ".form-autocomplete-selection" "css_element"
 
   @javascript
@@ -58,7 +58,7 @@ Feature: Edited forum posts handle tags correctly
     Then I should see "OT1" in the ".tag_list" "css_element"
     And I should see "OT3" in the ".tag_list" "css_element"
     And I should not see "OT2" in the ".tag_list" "css_element"
-    And I click on "Edit" "link" in the "//div[@aria-label='Student post subject by Teacher 1']" "xpath_element"
+    And I click on "Edit" "link" in the "Student post subject" "mod_forum > Post"
     And I should see "OT1" in the ".form-autocomplete-selection" "css_element"
     And I should see "OT3" in the ".form-autocomplete-selection" "css_element"
     And I should not see "OT2" in the ".form-autocomplete-selection" "css_element"
