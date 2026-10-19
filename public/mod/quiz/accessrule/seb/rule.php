@@ -58,6 +58,12 @@ class quizaccess_seb extends access_rule_base {
      * @return access_rule_base|null the rule, if applicable, else null.
      */
     public static function make(\mod_quiz\quiz_settings $quizobj, $timenow, $canignoretimelimits) {
+        // Avoid loading settings when SEB is not enabled.
+        $quiz = $quizobj->get_quiz();
+        if (property_exists($quiz, 'seb_requiresafeexambrowser') && empty($quiz->seb_requiresafeexambrowser)) {
+            return null;
+        }
+
         $accessmanager = new seb_access_manager($quizobj);
         // If Safe Exam Browser is not required, this access rule is not applicable.
         if (!$accessmanager->seb_required()) {
