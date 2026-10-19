@@ -45,7 +45,7 @@ Feature: Blog posts are always displayed in reverse chronological order
     #
     # Edit one of the blog posts.
     #
-    And I click on "Edit" "link" in the "//div[@aria-label='Blog post 2 by Student 1']" "xpath_element"
+    And I click on "Edit" "link" in the "Blog post 2" "mod_forum > Post"
     And I set the following fields to these values:
       | Subject | Edited blog post 2      |
     And I press "Save changes"
@@ -55,7 +55,7 @@ Feature: Blog posts are always displayed in reverse chronological order
     # Reply to another blog post.
     #
     And I am on the "Course blog forum" "forum activity" page logged in as teacher1
-    And I click on "Discuss this topic" "link" in the "//div[@aria-label='Blog post 1 by Student 1']" "xpath_element"
+    And I click on "Discuss this topic" "link" in the "Blog post 1" "mod_forum > Post"
     And I reply "Blog post 1" post from "Course blog forum" forum with:
       | Message | Reply to the first post |
     And I am on the "Course blog forum" "forum activity" page
@@ -68,6 +68,6 @@ Feature: Blog posts are always displayed in reverse chronological order
     #
     # Make sure the next/prev navigation uses the same order of the posts.
     #
-    And I click on "Discuss this topic" "link" in the "//div[@aria-label='Edited blog post 2 by Student 1']" "xpath_element"
+    And I click on "Discuss this topic" "link" in the "Edited blog post 2" "mod_forum > Post"
     And "//a[@aria-label='Next discussion: Blog post 3']" "xpath_element" should exist
     And "//a[@aria-label='Previous discussion: Blog post 1']" "xpath_element" should exist
