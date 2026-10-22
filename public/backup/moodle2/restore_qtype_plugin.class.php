@@ -48,6 +48,22 @@ abstract class restore_qtype_plugin extends restore_plugin {
     private $questionanswercacheid = null;
 
     /**
+     * Stores row IDs so duplicate backup entries can update a value already inserted during this restore.
+     *
+     * A dataset is the list of generated values for one variable in a calculated question. Each entry has an item number,
+     * e.g., item 1 for {a} might contain 2.7. A backup can contain multiple rows for the same item number in any order.
+     *
+     * The `qtype_calculated::get_database_dataset_items` method selects the row with the highest ID for each item number.
+     * Restore must select the same value. We compare the original row IDs from the backup and, if a higher one
+     * appears later, use the restored ID to update the row already inserted instead of creating another.
+     *
+     * @var array A mapping from each item number to its original and restored row IDs,
+     *            i.e., [item number => [original row ID, restored row ID]].
+     * @see qtype_calculated::get_database_dataset_items()
+     */
+    private array $datasetitemcache = [];
+
+    /**
      * @var array List of fields to exclude form hashing during restore.
      */
     protected array $excludedhashfields = [];
@@ -292,6 +308,7 @@ abstract class restore_qtype_plugin extends restore_plugin {
     public function process_question_dataset_definition($data) {
         global $DB;
 
+        $this->datasetitemcache = [];
         $data = (object)$data;
         $oldid = $data->id;
 
@@ -380,7 +397,24 @@ abstract class restore_qtype_plugin extends restore_plugin {
         // let's create the question_dataset_items
         $data->definition = $newdefinitionid;
         $data->itemnumber = $data->number;
-        $DB->insert_record('question_dataset_items', $data);
+
+        // Backups created prior to MDL-89173 can contain duplicate dataset items in any order.
+        // We keep the value with the highest original ID to match the value selected by
+        // `qtype_calculated::get_database_dataset_items`.
+        if (isset($this->datasetitemcache[$data->itemnumber])) {
+            [$previousoldid, $newid] = $this->datasetitemcache[$data->itemnumber];
+
+            if ($oldid <= $previousoldid) {
+                return;
+            }
+
+            $data->id = $newid;
+            $DB->update_record('question_dataset_items', $data);
+        } else {
+            $newid = $DB->insert_record('question_dataset_items', $data);
+        }
+
+        $this->datasetitemcache[$data->itemnumber] = [$oldid, $newid];
     }
 
     /**
@@ -517,12 +551,21 @@ abstract class restore_qtype_plugin extends restore_plugin {
             );
         }
         if (isset($questiondata->options->datasets)) {
+            $haspreferredid = fn(array $item, ?stdClass $existing): bool => $existing === null || $item['id'] > $existing->id;
+            $preferitem = fn(array $items, array $item): bool => $haspreferredid($item, $items[$item['number']] ?? null);
+            $putitem = fn(array $items, array $item): array => array_replace($items, [$item['number'] => (object) $item]);
+            $collectitems = fn(array $items, array $item): array => $preferitem($items, $item) ? $putitem($items, $item) : $items;
+
             foreach ($questiondata->options->datasets as $dataset) {
                 if (isset($dataset->dataset_items)) {
-                    $dataset->items = array_map(
-                        fn($item) => (object) $item,
-                        $dataset->dataset_items['dataset_item'],
-                    );
+                    // Match `qtype_calculated::get_datasets_for_export` when comparing with an existing question.
+                    // For example, dataset item 2 may have an older row containing 7.7 and a newer row containing 2.7.
+                    // The database reader selects only 2.7. Including both backup rows would make the hashes differ
+                    // and cause restore to create a duplicate question. When itemcount is zero, the reader excludes
+                    // all items, so we must exclude them here too.
+                    $items = $dataset->itemcount > 0 ? $dataset->dataset_items['dataset_item'] : [];
+                    $dataset->items = array_reduce($items, $collectitems, []);
+
                     unset($dataset->dataset_items);
                 }
             }

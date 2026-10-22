@@ -43,6 +43,7 @@ require_once($CFG->dirroot . '/backup/util/includes/restore_includes.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 #[\PHPUnit\Framework\Attributes\CoversClass(\restore_qtype_plugin::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\backup_qtype_plugin::class)]
 #[\PHPUnit\Framework\Attributes\CoversClass(\restore_create_categories_and_questions::class)]
 #[\PHPUnit\Framework\Attributes\CoversClass(\restore_move_module_questions_categories::class)]
 #[\PHPUnit\Framework\Attributes\CoversMethod(\restore_controller::class, 'execute_plan')]
@@ -1166,5 +1167,116 @@ final class backup_test extends \advanced_testcase {
         $category = question_get_default_category($qbankcontext->id);
         // The question bank entry for the restored question has the same nextqueston value as the original.
         $this->assertEquals(3, $DB->get_field('question_bank_entries', 'nextversion', ['questioncategoryid' => $category->id]));
+    }
+
+    /**
+     * Calculated questions are reused despite older duplicate dataset rows in the database or backup.
+     *
+     * @param string $qtype Question type
+     * @param int $itemcount Number of active dataset items
+     * @param string $itemorder Order of dataset rows in the backup created before MDL-89173
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('calculated_dataset_provider')]
+    public function test_calculated_dataset_duplicates(string $qtype, int $itemcount, string $itemorder): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $qbank = $generator->create_module('qbank', ['course' => $course->id]);
+        $category = question_get_default_category(module::instance($qbank->cmid)->id);
+        $which = $qtype === 'calculatedsimple' ? 'sumwithvariants' : null;
+        $question = $generator->get_plugin_generator('core_question')->create_question($qtype, $which, [
+            'category' => $category->id,
+        ]);
+        $quiz = $generator->create_module('quiz', ['course' => $course->id]);
+        quiz_add_quiz_question($question->id, $quiz);
+
+        // Two definitions exercise reuse of item numbers across datasets.
+        $definitions = question_bank::get_qtype($qtype)->get_dataset_definitions($question->id, []);
+        $this->assertCount(2, $definitions);
+        foreach ($definitions as $definition) {
+            $DB->set_field('question_dataset_definitions', 'itemcount', $itemcount, ['id' => $definition->id]);
+            $DB->delete_records('question_dataset_items', ['definition' => $definition->id]);
+            $value = $definition->name === 'a' ? 2.7 : 3.7;
+            foreach ([[1, 7.7], [1, $value], [2, 8.5]] as [$number, $itemvalue]) {
+                $itemid = $DB->insert_record('question_dataset_items', [
+                    'definition' => $definition->id,
+                    'itemnumber' => $number,
+                    'value' => $itemvalue,
+                ]);
+                if ($definition->name === 'a' && $itemvalue === $value) {
+                    $changeditemid = $itemid;
+                }
+            }
+        }
+
+        for ($round = 0; $round < 3; $round++) {
+            $backupid = $this->backup_course_module($quiz->cmid);
+            $filename = make_backup_temp_directory($backupid) . '/questions.xml';
+            if ($round === 0) {
+                $xml = simplexml_load_file($filename);
+                $definitions = $xml->xpath('//dataset_definition');
+                $this->assertCount(2, $definitions);
+                foreach ($definitions as $definition) {
+                    // New backups contain only the latest value for each item number.
+                    $this->assertCount(2, $definition->dataset_items->dataset_item);
+                    $this->assertEquals(1, (int) $definition->dataset_items->dataset_item[0]->number);
+                    $this->assertEquals(
+                        (string) $definition->name === 'a' ? 2.7 : 3.7,
+                        (float) $definition->dataset_items->dataset_item[0]->value,
+                    );
+
+                    // Reconstruct a backup from before MDL-89173, including older duplicate rows in either order.
+                    unset($definition->dataset_items);
+                    $items = $definition->addChild('dataset_items');
+                    $rows = $DB->get_records('question_dataset_items', ['definition' => (int) $definition['id']], $itemorder);
+                    foreach ($rows as $row) {
+                        $item = $items->addChild('dataset_item');
+                        $item->addAttribute('id', $row->id);
+                        $item->addChild('number', $row->itemnumber);
+                        $item->addChild('value', $row->value);
+                    }
+                }
+                $legacyxml = $xml->asXML();
+            } else {
+                file_put_contents($filename, $legacyxml);
+            }
+            if ($round === 2) {
+                // A real change to an active value must still create a separate question.
+                $DB->set_field('question_dataset_items', 'value', 9.9, ['id' => $changeditemid]);
+            }
+            $this->restore_to_course($backupid, $course->id);
+            $expectedcount = $round === 2 && $itemcount > 0 ? 2 : 1;
+            $this->assertEquals($expectedcount, $DB->count_records('question', ['qtype' => $qtype]));
+        }
+
+        if ($itemcount > 0) {
+            // Restoring a question from a backup created before MDL-89173 must not import older duplicate dataset rows.
+            $restored = $DB->get_record_select('question', 'qtype = ? AND id <> ?', [$qtype, $question->id], '*', MUST_EXIST);
+            $datasets = question_bank::get_qtype($qtype)->get_datasets_for_export($restored);
+            $this->assertCount(2, $datasets);
+            foreach ($datasets as $dataset) {
+                $items = $DB->get_records('question_dataset_items', ['definition' => $dataset->id], 'itemnumber');
+                $this->assertCount(2, $items);
+                $this->assertEquals($dataset->name === 'a' ? 2.7 : 3.7, reset($items)->value);
+            }
+        }
+    }
+
+    /**
+     * Dataset cases for the calculated question family.
+     *
+     * @return array
+     */
+    public static function calculated_dataset_provider(): array {
+        $cases = [];
+        foreach (['calculated', 'calculatedsimple', 'calculatedmulti'] as $qtype) {
+            $cases[$qtype . ' oldest first'] = [$qtype, 2, 'id ASC'];
+            $cases[$qtype . ' newest first'] = [$qtype, 2, 'id DESC'];
+            $cases[$qtype . ' no active items'] = [$qtype, 0, 'id ASC'];
+        }
+        return $cases;
     }
 }
