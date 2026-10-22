@@ -869,6 +869,49 @@ final class backup_test extends \advanced_testcase {
     }
 
     /**
+     * Test that unused random question placeholders in 4.x backups are skipped without affecting random selection.
+     */
+    public function test_restore_unused_random_question(): void {
+        global $CFG, $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $backupid = 'unused_random_question';
+        $backuppath = make_backup_temp_directory($backupid);
+        get_file_packer('application/vnd.moodle.backup')->extract_to_pathname(
+            $CFG->dirroot . '/mod/quiz/tests/fixtures/moodle_42_random_question.mbz',
+            $backuppath,
+        );
+
+        // The fixture has one question used by a random slot and one unused question.
+        // Replace the unused question with a random placeholder left over from before Moodle 4.0.
+        $filename = $backuppath . '/questions.xml';
+        $xml = simplexml_load_file($filename);
+        $question = $xml->xpath('//question[@id="2"]')[0];
+        $question->qtype = 'random';
+        $question->name = 'Unused random question';
+        $question->questiontext = '0';
+        unset($question->plugin_qtype_truefalse_question, $question->tags);
+        $xml->asXML($filename);
+
+        $course = $this->getDataGenerator()->create_course();
+        $this->restore_to_course($backupid, $course->id);
+
+        // Only the true/false question and its bank entry and version should have been created.
+        $this->assertEquals(['truefalse'], $DB->get_fieldset_select('question', 'qtype', ''));
+        $this->assertEquals(1, $DB->count_records('question_bank_entries'));
+        $this->assertEquals(1, $DB->count_records('question_versions'));
+
+        // The random slot still selects the restored question through its set reference.
+        $reference = $DB->get_record('question_set_references', [], '*', MUST_EXIST);
+        $this->assertTrue($DB->record_exists('quiz_slots', ['id' => $reference->itemid]));
+        $filter = json_decode($reference->filtercondition, true)['filter'];
+        $loader = new \core_question\local\bank\random_question_loader(new \qubaid_list([]));
+        $questions = $loader->get_filtered_questions($filter);
+        $this->assertEquals([$DB->get_field('question', 'id', [], MUST_EXIST)], array_keys($questions));
+    }
+
+    /**
      * Restore a deleted earlier question version to its existing question bank entry.
      */
     public function test_restore_backup_containing_deleted_earlier_version(): void {

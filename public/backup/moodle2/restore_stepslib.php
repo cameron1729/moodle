@@ -5364,6 +5364,12 @@ class restore_create_categories_and_questions extends restore_structure_step {
             }
         }
 
+        // Moodle 4.0+ backups use question_set_references for random selection. Any remaining random questions
+        // are unused legacy placeholders, so skip them before creating question bank entries.
+        if ($data->qtype === 'random') {
+            return;
+        }
+
         // In the past, there were some very sloppy values of penalty. Fix them.
         if ($data->penalty >= 0.33 && $data->penalty <= 0.34) {
             $data->penalty = 0.3333333;
@@ -5439,11 +5445,6 @@ class restore_create_categories_and_questions extends restore_structure_step {
             }
 
             // Now store the question.
-            if ($data->qtype === 'random') {
-                throw new \core\exception\coding_exception(
-                    'You cannot restore a question with qtype "random". It must be converted to a set reference instead.',
-                );
-            }
             $newitemid = $DB->insert_record('question', $data);
             $this->set_mapping('question', $oldid, $newitemid);
             // Also annotate them as question_created, we need
