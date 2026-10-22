@@ -152,7 +152,19 @@ abstract class backup_qtype_plugin extends backup_plugin {
                                        JOIN {question_datasets} qd ON qd.datasetdefinition = qdd.id
                                       WHERE qd.question = ?', array(backup::VAR_PARENTID));
 
-        $item->set_source_table('question_dataset_items', array('definition' => backup::VAR_PARENTID));
+        // Only use the newest row (the highest ID) for each item number. This matches
+        // `qtype_calculated::get_database_dataset_items`, so backup and restore agree on
+        // which value to keep when a dataset contains older duplicate rows.
+        $item->set_source_sql(
+            'SELECT qi.*
+               FROM {question_dataset_items} qi
+               JOIN (SELECT MAX(id) AS maxid
+                       FROM {question_dataset_items}
+                      WHERE definition = ?
+                   GROUP BY itemnumber) latest ON qi.id = latest.maxid
+           ORDER BY qi.itemnumber',
+            [backup::VAR_PARENTID],
+        );
 
         // Aliases
         $item->set_source_alias('itemnumber', 'number');
