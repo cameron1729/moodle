@@ -20,9 +20,9 @@ Moodle is designed to allow educators, administrators and learners to create per
 
 You may also be interested in:
 
-- attending a [Moodle Moot][6]
+- attending a [MoodleMoot][6]
 - our regular series of [developer meetings][7]
-- the [Moodle User Association][8]
+- helping shape Moodle through the [Moodle LMS Community Product Advisory Group][8]
 
 ## Installation and hosting
 
@@ -39,9 +39,9 @@ Moodle is provided freely as open source software, under version 3 of the GNU Ge
 [3]: https://docs.moodle.org/
 [4]: https://sandbox.moodledemo.net/
 [5]: https://moodledev.io
-[6]: https://moodle.com/events/mootglobal/
+[6]: https://moodle.com/events/
 [7]: https://moodledev.io/general/community/meetings
-[8]: https://moodleassociation.org/
+[8]: https://moodle.org/lms-community-pag
 [9]: https://download.moodle.org
 [10]: https://moodle.com/partners
 [11]: https://moodle.com/cloud
