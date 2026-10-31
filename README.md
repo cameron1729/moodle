@@ -10,8 +10,8 @@ Moodle is designed to allow educators, administrators and learners to create per
 
 ## Documentation
 
-- Read our [User documentation][3]
-- Discover our [developer documentation][5]
+- Read our [User documentation][2]
+- Discover our [developer documentation][3]
 - Take a look at our [demo site][4]
 
 ## Community
@@ -20,13 +20,13 @@ Moodle is designed to allow educators, administrators and learners to create per
 
 You may also be interested in:
 
-- attending a [MoodleMoot][6]
-- our regular series of [developer meetings][7]
-- helping shape Moodle through the [Moodle LMS Community Product Advisory Group][8]
+- attending a [MoodleMoot][5]
+- our regular series of [developer meetings][6]
+- helping shape Moodle through the [Moodle LMS Community Product Advisory Group][7]
 
 ## Installation and hosting
 
-Moodle is Free, and Open Source software. You can easily [download Moodle][9] and run it on your own web server, however you may prefer to work with one of our experienced [Moodle Partners][10].
+Moodle is Free, and Open Source software. You can easily [download Moodle][8] and follow our [installation guide][9] to run it on your own web server, however you may prefer to work with one of our experienced [Moodle Partners][10].
 
 Moodle also offers hosting through both [MoodleCloud][11], and our [partner network][10].
 
@@ -35,14 +35,14 @@ Moodle also offers hosting through both [MoodleCloud][11], and our [partner netw
 Moodle is provided freely as open source software, under version 3 of the GNU General Public License. See our [license page][12] for more information.
 
 [1]: https://moodle.org
-[2]: https://moodle.com
-[3]: https://docs.moodle.org/
+[2]: https://docs.moodle.org/
+[3]: https://moodledev.io
 [4]: https://sandbox.moodledemo.net/
-[5]: https://moodledev.io
-[6]: https://moodle.com/events/
-[7]: https://moodledev.io/general/community/meetings
-[8]: https://moodle.org/lms-community-pag
-[9]: https://download.moodle.org
+[5]: https://moodle.com/events/
+[6]: https://moodledev.io/general/community/meetings
+[7]: https://moodle.org/lms-community-pag
+[8]: https://download.moodle.org
+[9]: https://docs.moodle.org/en/Installing_Moodle
 [10]: https://moodle.com/partners
 [11]: https://moodle.com/cloud
 [12]: https://moodledev.io/general/license
