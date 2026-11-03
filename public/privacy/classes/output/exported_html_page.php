@@ -80,6 +80,7 @@ class exported_html_page implements renderable, templatable {
             'systemname' => $this->systemname,
             'timegenerated' => time(),
             'username' => $this->username,
+            'language' => get_html_lang_attribute_value(current_language()),
             'righttoleft' => $this->rtl,
             'siteurl' => $this->siteurl
         ];
