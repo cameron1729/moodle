@@ -67,7 +67,10 @@ const registerListenerEvents = (contentBank) => {
                 const heading = fileArea.querySelector(selectors.elements.heading);
                 if (heading) {
                     heading.removeAttribute('role');
-                    heading.querySelectorAll(selectors.elements.cell).forEach(cell => cell.removeAttribute('role'));
+                    heading.querySelectorAll(selectors.elements.cell).forEach(cell => {
+                        cell.removeAttribute('role');
+                        cell.removeAttribute('aria-sort');
+                    });
                 }
             }
             viewGrid.classList.add('active');
@@ -91,7 +94,17 @@ const registerListenerEvents = (contentBank) => {
                 const heading = fileArea.querySelector(selectors.elements.heading);
                 if (heading) {
                     heading.setAttribute('role', 'row');
-                    heading.querySelectorAll(selectors.elements.cell).forEach(cell => cell.setAttribute('role', 'columnheader'));
+                    heading.querySelectorAll(selectors.elements.cell).forEach(cell => {
+                        cell.setAttribute('role', 'columnheader');
+                        const sortButton = cell.querySelector(selectors.elements.sortbutton);
+                        let direction = 'none';
+                        if (sortButton.classList.contains('dir-asc')) {
+                            direction = 'ascending';
+                        } else if (sortButton.classList.contains('dir-desc')) {
+                            direction = 'descending';
+                        }
+                        cell.setAttribute('aria-sort', direction);
+                    });
                 }
             }
             viewList.classList.add('active');
