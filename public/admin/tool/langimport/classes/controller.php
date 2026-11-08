@@ -46,6 +46,8 @@ class controller {
     private $installer;
     /** @var array languages available on the remote server */
     public $availablelangs;
+    /** @var array Language codes for packs installed or updated by this controller. */
+    public array $changedlangs = [];
 
     /**
      * Constructor.
@@ -67,6 +69,10 @@ class controller {
      * @param moodle_url $url
      */
     public function redirect(moodle_url $url): void {
+        if ($this->changedlangs) {
+            $url = new moodle_url($url, ['readme' => $this->changedlangs]);
+        }
+
         if ($this->info) {
             $info = implode('<br />', $this->info);
             \core\notification::success($info);
@@ -107,6 +113,7 @@ class controller {
                     break;
                 case \lang_installer::RESULT_INSTALLED:
                     $updatedpacks++;
+                    $this->changedlangs[] = $langcode;
                     if ($updating) {
                         event\langpack_updated::event_with_langcode($langcode)->trigger();
                         $this->info[] = get_string('langpackupdated', 'tool_langimport', $langcode);

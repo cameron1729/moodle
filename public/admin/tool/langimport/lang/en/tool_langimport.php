@@ -17,6 +17,9 @@
 /**
  * Strings for component 'tool_langimport', language 'en', branch 'MOODLE_22_STABLE'
  *
+ * The 'readme' string contains Markdown notes about this language pack. Leave it empty if no notes are needed.
+ * It is not inherited from parent languages and may use a different language or script from the pack.
+ *
  * @package    tool
  * @subpackage langimport
  * @copyright  1999 onwards Martin Dougiamas  {@link http://moodle.com}
@@ -34,6 +37,7 @@ $string['langimport'] = 'Language import utility';
 $string['langimportdisabled'] = 'Language import feature has been disabled. You have to update your language packs manually at the file-system level. Do not forget to purge string caches after you do so.';
 $string['langpackinstalled'] = 'Language pack \'{$a}\' was successfully installed';
 $string['langpackinstalledevent'] = 'Language pack installed';
+$string['langpacknotes'] = 'Language pack notes';
 $string['langpackremoved'] = 'Language pack \'{$a}\' was uninstalled';
 $string['langpacknotremoved'] = 'An error has occurred; language pack \'{$a}\' is not completely uninstalled. Please check file permissions.';
 $string['langpackremovedevent'] = 'Language pack uninstalled';
@@ -50,6 +54,7 @@ $string['noenglishuninstall'] = 'The English language pack cannot be uninstalled
 $string['nolangupdateneeded'] = 'All your language packs are up to date, no update is needed';
 $string['pluginname'] = 'Language packs';
 $string['purgestringcaches'] = 'Purge string caches';
+$string['readme'] = '';
 $string['search'] = 'Search available language packs';
 $string['selectlangs'] = 'Select languages to uninstall';
 $string['uninstall'] = 'Uninstall selected language pack(s)';

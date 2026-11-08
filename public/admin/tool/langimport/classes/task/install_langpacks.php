@@ -16,6 +16,8 @@
 
 namespace tool_langimport\task;
 
+use core\url;
+
 /**
  * Ad hoc task to install one or more language packs.
  *
@@ -69,7 +71,7 @@ class install_langpacks extends \core\task\adhoc_task {
         $message->userfrom = \core_user::get_noreply_user();
         $message->userto = $this->get_userid();
         $message->notification = 1;
-        $message->contexturl = (new \moodle_url('/admin/tool/langimport/index.php'))->out(false);
+        $message->contexturl = (new url('/admin/tool/langimport/index.php', ['readme' => $controller->changedlangs]))->out(false);
         $message->contexturlname = get_string('pluginname', 'tool_langimport');
 
         $message->subject = get_string('installfinished', 'tool_langimport');

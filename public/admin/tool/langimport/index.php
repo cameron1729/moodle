@@ -42,6 +42,9 @@ $pack               = optional_param_array('pack', array(), PARAM_SAFEDIR);    /
 $uninstalllang      = optional_param_array('uninstalllang', array(), PARAM_LANG);// installed pack to uninstall
 $confirmtounistall  = optional_param('confirmtouninstall', '', PARAM_SAFEPATH);  // uninstallation confirmation
 $purgecaches        = optional_param('purgecaches', false, PARAM_BOOL);  // explicit caches reset
+$readmelangs        = optional_param_array('readme', [], PARAM_SAFEDIR);
+
+$output = $PAGE->get_renderer('tool_langimport');
 
 // Filter the uninstall language list.
 // If the list contains a language which is not installed, it is replaced with an empty string.
@@ -58,8 +61,10 @@ if ($purgecaches) {
 
 if (!empty($CFG->skiplangupgrade)) {
     echo $OUTPUT->header();
+    echo $OUTPUT->heading(get_string('langimport', 'tool_langimport'));
     echo $OUTPUT->box(get_string('langimportdisabled', 'tool_langimport'));
     echo $OUTPUT->single_button(new moodle_url($PAGE->url, array('purgecaches' => 1)), get_string('purgestringcaches', 'tool_langimport'));
+    echo $output->render(new \tool_langimport\output\readmes($readmelangs));
     echo $OUTPUT->footer();
     die;
 }
@@ -187,6 +192,8 @@ if ($controller->errors) {
     \core\notification::error($info);
 }
 
+echo $output->render(new \tool_langimport\output\readmes(array_merge($readmelangs, $controller->changedlangs)));
+
 // Inform about pending language packs installations.
 foreach (\core\task\manager::get_adhoc_tasks('\tool_langimport\task\install_langpacks') as $installtask) {
     $installtaskdata = $installtask->get_custom_data();
@@ -228,6 +235,5 @@ foreach ($availablelangs as $alang) {
 }
 
 $renderable = new \tool_langimport\output\langimport_page($installedlangs, $options, $uninstallurl, $updateurl, $installurl);
-$output = $PAGE->get_renderer('tool_langimport');
 echo $output->render($renderable);
 echo $OUTPUT->footer();
