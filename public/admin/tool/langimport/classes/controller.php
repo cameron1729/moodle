@@ -66,7 +66,7 @@ class controller {
     /**
      * Redirect to the specified url, outputting any required messages.
      *
-     * @param moodle_url $url
+     * @param moodle_url $url Redirect destination.
      */
     public function redirect(moodle_url $url): void {
         if ($this->changedlangs) {
@@ -89,9 +89,9 @@ class controller {
     /**
      * Install language packs provided
      *
-     * @param string|array $langs array of langcodes or individual langcodes
-     * @param bool $updating true if updating the langpacks
-     * @return int false if an error encountered or
+     * @param string|array $langs Language code or list of language codes.
+     * @param bool $updating Whether to treat the installation as an update.
+     * @return int Number of language packs installed or updated.
      * @throws \moodle_exception when error is encountered installing langpack
      */
     public function install_languagepacks($langs, $updating = false) {
@@ -134,8 +134,8 @@ class controller {
     /**
      * Uninstall language pack
      *
-     * @param string $lang language code
-     * @return bool true if language succesfull installed
+     * @param string $lang Language code.
+     * @return bool Whether the language pack was removed.
      */
     public function uninstall_language($lang) {
         global $CFG;
@@ -182,7 +182,7 @@ class controller {
     /**
      * Updated all install language packs with the latest found on servre
      *
-     * @return bool true if languages succesfully updated.
+     * @return bool Whether the update completed without an error.
      */
     public function update_all_installed_languages() {
         global $CFG;
@@ -242,9 +242,9 @@ class controller {
     /**
      * checks the md5 of the zip file, grabbed from download.moodle.org,
      * against the md5 of the local language file from last update
-     * @param string $lang language code
-     * @param string $md5check md5 to check
-     * @return bool true if installed
+     * @param string $lang Language code.
+     * @param string $md5check Expected language pack checksum.
+     * @return bool Whether the installed pack matches the expected checksum.
      */
     public function is_installed_lang($lang, $md5check) {
         global $CFG;
@@ -261,8 +261,8 @@ class controller {
      * Alternatively, if the parameter is empty, returns URL of the page with the
      * list of all available language packs.
      *
-     * @param string $langcode language code like 'cs' or empty for unknown
-     * @return string URL
+     * @param string $langcode Language code, or an empty string for the list of available packs.
+     * @return string URL of the language pack or list of available packs.
      */
     public function lang_pack_url($langcode = '') {
         return $this->installer->lang_pack_url($langcode);
@@ -271,7 +271,7 @@ class controller {
     /**
      * Schedule installation of the given language packs asynchronously via ad hoc task.
      *
-     * @param string|array $langs array of langcodes or individual langcodes
+     * @param string|array $langs Language code or list of language codes.
      */
     public function schedule_languagepacks_installation($langs): void {
         global $USER;

@@ -92,7 +92,7 @@ final class controller_test extends \advanced_testcase {
     /**
      * Test uninstall of language with invalid values.
      *
-     * @params string $lang
+     * @param string $lang Invalid or protected language code.
      */
     #[DataProvider('uninstall_lang_invalid_provider')]
     public function test_uninstall_lang_invalid(string $lang): void {
@@ -107,7 +107,7 @@ final class controller_test extends \advanced_testcase {
     /**
      * Data provider for uninstall_lang tests with invalid values.
      *
-     * @return array
+     * @return array Invalid and protected language code test cases.
      */
     public static function uninstall_lang_invalid_provider(): array {
         return [

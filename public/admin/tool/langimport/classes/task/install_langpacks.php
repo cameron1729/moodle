@@ -60,7 +60,7 @@ class install_langpacks extends \core\task\adhoc_task {
     /**
      * Notify user that the task finished successfully.
      *
-     * @param \tool_langimport\controller $controller
+     * @param \tool_langimport\controller $controller Controller containing the installation results.
      */
     protected function notify_user_success(\tool_langimport\controller $controller): void {
 
@@ -86,7 +86,7 @@ class install_langpacks extends \core\task\adhoc_task {
     /**
      * Notify user that the task failed.
      *
-     * @param string $error The error text
+     * @param string $error Error message.
      */
     protected function notify_user_error(string $error): void {
 
