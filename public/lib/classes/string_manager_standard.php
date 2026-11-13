@@ -35,6 +35,20 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class core_string_manager_standard implements core_string_manager {
+    /** @var array PHPUnit language file hashes.
+     *
+     * An associative array: langfilepath => hashoffile. We need this to work around a
+     * bug in PHP (https://github.com/php/php-src/issues/9812) where calling opcache_reset
+     * (which we previously did for language strings between unit tests) from the CLI can
+     * cause runaway memory usage when file caching is enabled.
+     *
+     * When a file is first seen or its hash changes, we use opcache_invalidate to invalidate
+     * its cached bytecode, then remember the hash if invalidation succeeds.
+     *
+     * See the prepare_language_file method for details.
+     */
+    private static array $langfilehashes = [];
+
     /** @var string location of all packs except 'en' */
     protected $otherroot;
     /** @var string location of all lang pack local modifications */
@@ -139,22 +153,22 @@ class core_string_manager_standard implements core_string_manager {
             if (!file_exists("$CFG->dirroot/lang/en/$file.php")) {
                 return array();
             }
-            include("$CFG->dirroot/lang/en/$file.php");
+            include($this->prepare_language_file("$CFG->dirroot/lang/en/$file.php"));
             $enstring = $string;
 
             // And then corresponding local if present and allowed.
             if (!$disablelocal and file_exists("$this->localroot/en_local/$file.php")) {
-                include("$this->localroot/en_local/$file.php");
+                include($this->prepare_language_file("$this->localroot/en_local/$file.php"));
             }
             // Now loop through all langs in correct order.
             $deps = $this->get_language_dependencies($lang);
             foreach ($deps as $dep) {
                 // The main lang string location.
                 if (file_exists("$this->otherroot/$dep/$file.php")) {
-                    include("$this->otherroot/$dep/$file.php");
+                    include($this->prepare_language_file("$this->otherroot/$dep/$file.php"));
                 }
                 if (!$disablelocal and file_exists("$this->localroot/{$dep}_local/$file.php")) {
-                    include("$this->localroot/{$dep}_local/$file.php");
+                    include($this->prepare_language_file("$this->localroot/{$dep}_local/$file.php"));
                 }
             }
 
@@ -174,11 +188,11 @@ class core_string_manager_standard implements core_string_manager {
                 // English pack does not exist, so do not try to load anything else.
                 return array();
             }
-            include("$location/lang/en/$file.php");
+            include($this->prepare_language_file("$location/lang/en/$file.php"));
             $enstring = $string;
             // And then corresponding local english if present.
             if (!$disablelocal and file_exists("$this->localroot/en_local/$file.php")) {
-                include("$this->localroot/en_local/$file.php");
+                include($this->prepare_language_file("$this->localroot/en_local/$file.php"));
             }
 
             // Now loop through all langs in correct order.
@@ -186,15 +200,15 @@ class core_string_manager_standard implements core_string_manager {
             foreach ($deps as $dep) {
                 // Legacy location - used by contrib only.
                 if (file_exists("$location/lang/$dep/$file.php")) {
-                    include("$location/lang/$dep/$file.php");
+                    include($this->prepare_language_file("$location/lang/$dep/$file.php"));
                 }
                 // The main lang string location.
                 if (file_exists("$this->otherroot/$dep/$file.php")) {
-                    include("$this->otherroot/$dep/$file.php");
+                    include($this->prepare_language_file("$this->otherroot/$dep/$file.php"));
                 }
                 // Local customisations.
                 if (!$disablelocal and file_exists("$this->localroot/{$dep}_local/$file.php")) {
-                    include("$this->localroot/{$dep}_local/$file.php");
+                    include($this->prepare_language_file("$this->localroot/{$dep}_local/$file.php"));
                 }
             }
         }
@@ -641,9 +655,64 @@ class core_string_manager_standard implements core_string_manager {
         }
 
         // Lang packs use PHP files in dataroot, it is better to invalidate opcode caches.
-        if (function_exists('opcache_reset')) {
+        // However, we cannot call opcache_reset during PHPUnit because a PHP bug can cause
+        // runaway memory growth when file caching is enabled.
+        //
+        // We use prepare_language_file to handle the invalidation for PHPUnit instead.
+        //
+        // See: https://github.com/php/php-src/issues/9812 for bug details.
+        if (!PHPUNIT_TEST && function_exists('opcache_reset')) {
             opcache_reset();
         }
+    }
+
+    /**
+     * Returns a language file path, or a stream URI (to bypass OPcache in certain situations).
+     *
+     * This is needed because it's important to keep language strings up to date between tests.
+     * Previously this was achieved by calling opcache_reset during test cleanup, but that
+     * can cause runaway memory usage when file caching is enabled due to a PHP bug.
+     *
+     * This whole method is a mega-hack to get around that bug. The idea is:
+     *
+     *   1. If we are not in PHPUnit, or OPcache is not enabled, just return the file's path.
+     *   2. If OPcache can safely be used, calculate the file's hash and compare it with any remembered hash.
+     *   3. On first encounter or a changed hash, invalidate the file with opcache_invalidate and
+     *      remember the new hash only if invalidation succeeds.
+     *
+     * If OPcache cannot safely be used, or invalidation fails, we return a php://filter URI to bypass it
+     * (because php://filter URIs are not cached by OPcache and the caller will just get the contents).
+     *
+     * @see https://github.com/php/php-src/blob/php-8.3.36/ext/opcache/ZendAccelerator.c
+     * @see https://github.com/php/php-src/issues/9812
+     * @param string $path Language file path.
+     * @return string Path or a stream URI of the language file.
+     */
+    private function prepare_language_file(string $path): string {
+        // No workaround is needed outside PHPUnit or when OPcache is disabled.
+        if (!PHPUNIT_TEST || !ini_get_bool('opcache.enable') || !ini_get_bool('opcache.enable_cli')) {
+            return $path;
+        }
+
+        // Bypass OPcache when its state is unknown or it cannot safely cache these includes.
+        $status = function_exists('opcache_get_status') ? opcache_get_status(false) : false;
+        if (!$status || !empty($status['file_cache_only']) || $status['restart_pending'] || $status['cache_full']) {
+            return 'php://filter/read=/resource=' . $path;
+        }
+
+        // We need a content hash because tests can rewrite files without changing their timestamps.
+        $key = realpath($path) ?: $path;
+        $hash = hash_file('xxh128', $key);
+
+        if (!isset(self::$langfilehashes[$key]) || self::$langfilehashes[$key] !== $hash) {
+            if (!opcache_invalidate($key, true)) {
+                return 'php://filter/read=/resource=' . $path;
+            }
+
+            self::$langfilehashes[$key] = $hash;
+        }
+
+        return $path;
     }
 
     /**
@@ -703,7 +772,7 @@ class core_string_manager_standard implements core_string_manager {
             return $stack;
         }
         $string = array();
-        include("$this->otherroot/$lang/langconfig.php");
+        include($this->prepare_language_file("$this->otherroot/$lang/langconfig.php"));
 
         if (empty($string['parentlanguage']) or $string['parentlanguage'] === 'en') {
             return array_merge(array($lang), $stack);
